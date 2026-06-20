@@ -1,0 +1,21 @@
+{
+  "name": "NUS ISB",
+  "short_name": "NUS ISB",
+  "description": "Live shuttle bus tracker for the NUS campus",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#003d7c",
+  "theme_color": "#003d7c",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["travel", "utilities"],
+  "icons": [
+    { "src": "icon.svg",     "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png",     "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png",     "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
