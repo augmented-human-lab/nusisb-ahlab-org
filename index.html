@@ -304,6 +304,25 @@
   .diag-detail { color: #dc2626; font-size: 0.75rem; margin-top: 0.2rem; }
   .diag-refresh { margin-left: auto; }
   .diag-card-head { display: flex; align-items: center; gap: 0.5rem; }
+
+  /* Mobile block — the dashboard is desktop-only for now */
+  #mobileBlock { display: none; }
+  body.is-mobile { overflow: hidden; }
+  body.is-mobile > header, body.is-mobile > main { display: none; }
+  body.is-mobile #mobileBlock {
+    display: flex; position: fixed; inset: 0; z-index: 100000;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 1.1rem; padding: 2rem;
+    background: var(--bg); color: var(--text);
+  }
+  #mobileBlock .mb-icon {
+    font-size: 2.6rem; color: var(--accent); background: var(--card);
+    width: 5.5rem; height: 5.5rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+  }
+  #mobileBlock h1 { font-size: 1.35rem; font-weight: 700; color: var(--primary); }
+  #mobileBlock p { font-size: 0.98rem; color: var(--text-muted); max-width: 22rem; line-height: 1.55; }
+  #mobileBlock .mb-brand { color: var(--text); font-weight: 700; }
   .eta-min { font-weight: 700; color: var(--accent); white-space: nowrap; }
   .eta-imminent { color: var(--high); }
 
@@ -1236,6 +1255,25 @@
 </style>
 </head>
 <body data-mode="unknown">
+
+<!-- Desktop-only gate: phones get a "coming soon" message instead of the dashboard -->
+<div id="mobileBlock" role="alertdialog" aria-label="Desktop only">
+  <div class="mb-icon"><i class="fa-solid fa-desktop"></i></div>
+  <h1>Mobile UI is coming soon</h1>
+  <p>The <span class="mb-brand">NUS ISB</span> dashboard is optimised for desktop. Please open it in a desktop browser for now.</p>
+</div>
+<script>
+  // Detect actual mobile devices (not just narrow desktop windows): mobile UA, or
+  // a small touch screen. iPad/desktop in "request desktop" mode is left as desktop.
+  (function () {
+    var ua = navigator.userAgent || '';
+    var uaMobile = /Android|iPhone|iPod|iPad|Mobile|Windows Phone|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua);
+    var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    var touch = (navigator.maxTouchPoints || 0) > 0;
+    var minDim = Math.min(screen.width || 9999, screen.height || 9999);
+    if (uaMobile || (coarse && touch && minDim < 820)) document.body.classList.add('is-mobile');
+  })();
+</script>
 
 <header>
   <div class="header-row header-top">
