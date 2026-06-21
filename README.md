@@ -19,10 +19,12 @@ Mobile Stops view extras (all `body.is-mobile`-gated):
 - **Install banner** — captures `beforeinstallprompt` and shows an "Install App"
   card; on iOS (no prompt API) shows Add-to-Home-Screen instructions. Hidden once
   installed (`display-mode: standalone`) or dismissed.
-- **Nearest stop** — `navigator.geolocation.watchPosition` finds the closest stop
-  from `stop-coords.json`, showing an animated metres count and a compass arrow
-  (rotated by `bearing − deviceHeading`; tap the compass to grant the iOS
-  `DeviceOrientation` permission). Degrades gracefully if location is denied.
+- **Nearest stops** — `navigator.geolocation.watchPosition` shows the two closest
+  stops from `stop-coords.json`, each with an animated metres count and a compass
+  arrow (rotated by `bearing − deviceHeading`, unwrapped so it never spins the long
+  way past 0/360; tap the compass for the iOS `DeviceOrientation` permission).
+  Within 5 m it shows "You're here" instead of a distance. Degrades gracefully if
+  location is denied.
 - **Stop picker** — "Add a stop" opens a searchable bottom sheet (`#stopPicker`)
   listing every stop, marking already-tracked ones and capping at `MAX_STOPS`.
 

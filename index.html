@@ -1423,13 +1423,16 @@
     font-size: 1.1rem; cursor: pointer;
   }
   body.is-mobile .m-near-compass.m-compass-live { border-color: var(--accent); color: var(--accent); }
-  body.is-mobile #nearArrow { transition: transform 0.25s ease-out; }
+  body.is-mobile .m-near-arrow { transition: transform 0.25s ease-out; will-change: transform; }
+  body.is-mobile .m-here-pin { border-color: var(--low); background: rgba(42,157,143,0.12); color: var(--low); cursor: default; }
+  body.is-mobile .m-here .m-near-name { color: var(--low); }
   body.is-mobile .m-near-info { flex: 1; min-width: 0; }
   body.is-mobile .m-near-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
   body.is-mobile .m-near-name { font-size: 1.05rem; font-weight: 800; }
   body.is-mobile .m-near-dist { flex: 0 0 auto; text-align: right; color: var(--accent); font-weight: 800; }
-  body.is-mobile .m-near-dist span { font-size: 1.4rem; font-feature-settings: 'tnum'; }
+  body.is-mobile .m-near-dist .m-near-distval { font-size: 1.4rem; font-feature-settings: 'tnum'; }
   body.is-mobile .m-near-dist small { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
+  body.is-mobile .m-near-here { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; font-weight: 700; color: var(--low); }
   body.is-mobile .m-near-add { flex: 0 0 auto; margin-left: 0.5rem; border: 0; border-radius: 999px;
     padding: 0.4rem 0.85rem; background: var(--primary); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   body.is-mobile .m-near-tag { flex: 0 0 auto; margin-left: 0.5rem; width: 28px; height: 28px; border-radius: 50%;
@@ -2229,11 +2232,15 @@ window.addEventListener('appinstalled', () => {
 });
 
 /* ===== Nearest stop (geolocation + compass) ===== */
-let geoNearest = null;      // { stop, dist (m), bearing (deg from north) }
+let geoNearestList = [];    // up to 2 × { stop, dist (m), bearing (deg from north) }
+let geoSig = '';            // signature of the rendered list (stops + here-state)
 let geoHeading = null;      // device compass heading (deg) or null
 let geoState = 'idle';      // idle | on | denied | unsupported
 let geoWatchId = null;
+const NEAR_COUNT = 2;       // how many nearest-stop cards to show
+const HERE_M = 5;           // below this distance → "you're here"
 const TO_RAD = Math.PI / 180, TO_DEG = 180 / Math.PI;
+const norm360 = (d) => ((d % 360) + 360) % 360;
 function haversine(aLat, aLng, bLat, bLng) {
   const dLat = (bLat - aLat) * TO_RAD, dLng = (bLng - aLng) * TO_RAD;
   const la1 = aLat * TO_RAD, la2 = bLat * TO_RAD;
@@ -2246,15 +2253,15 @@ function bearingTo(aLat, aLng, bLat, bLng) {
   const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
   return (Math.atan2(y, x) * TO_DEG + 360) % 360;
 }
-function computeNearest(lat, lng) {
+function computeNearestList(lat, lng, n) {
   const coords = lastStopCoords || {};
-  let best = null;
+  const all = [];
   for (const [stop, c] of Object.entries(coords)) {
     if (!c || typeof c.lat !== 'number' || typeof c.lng !== 'number') continue;
-    const d = haversine(lat, lng, c.lat, c.lng);
-    if (!best || d < best.dist) best = { stop, dist: d, bearing: bearingTo(lat, lng, c.lat, c.lng) };
+    all.push({ stop, dist: haversine(lat, lng, c.lat, c.lng), bearing: bearingTo(lat, lng, c.lat, c.lng) });
   }
-  return best;
+  all.sort((a, b) => a.dist - b.dist);
+  return all.slice(0, n);
 }
 function startGeo() {
   if (geoState === 'on' || geoWatchId != null) return;
@@ -2262,12 +2269,18 @@ function startGeo() {
   geoWatchId = navigator.geolocation.watchPosition(
     (pos) => {
       geoState = 'on';
-      const n = computeNearest(pos.coords.latitude, pos.coords.longitude);
-      if (!n) return;
-      const changed = !geoNearest || geoNearest.stop !== n.stop;
-      geoNearest = n;
-      if (changed && IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
-      else updateNearestLive();
+      const list = computeNearestList(pos.coords.latitude, pos.coords.longitude, NEAR_COUNT);
+      if (!list.length) return;
+      geoNearestList = list;
+      // Re-render only when the card set OR a here/away state changes; otherwise
+      // just update distances + arrows in place (keeps animations smooth).
+      const sig = list.map((n) => n.stop + (n.dist < HERE_M ? '!' : '')).join(',');
+      if (sig !== geoSig) {
+        geoSig = sig;
+        if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile(); else updateNearestLive();
+      } else {
+        updateNearestLive();
+      }
     },
     (err) => {
       geoState = err && err.code === 1 ? 'denied' : 'idle';
@@ -2284,7 +2297,7 @@ function startOrientation() {
     let h = null;
     if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;          // iOS
     else if (e.absolute && typeof e.alpha === 'number') h = (360 - e.alpha) % 360;        // others
-    if (h != null) { geoHeading = h; updateNearestArrow(); }
+    if (h != null) { geoHeading = h; updateAllArrows(); }
   };
   // iOS 13+ needs permission via a user gesture; that's requested from the compass tap.
   if (!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function')) {
@@ -2306,22 +2319,32 @@ async function enableCompass() {
     }
   } catch (e) {}
 }
-function nearestCardHtml() {
-  if (!IS_MOBILE()) return '';
-  if (!geoNearest) {
-    if (geoState === 'denied') return `<button class="m-near m-near-off" data-geo-enable><i class="fa-solid fa-location-dot"></i> Enable location for your nearest stop</button>`;
-    return '';
-  }
-  const n = geoNearest;
+function oneNearCard(n, i) {
   const tracked = getStops().includes(n.stop);
-  return `<div class="m-near" data-near-stop="${escapeHtml(n.stop)}">
-    <button class="m-near-compass" data-compass aria-label="Point to ${escapeHtml(n.stop)}"><i class="fa-solid fa-arrow-up" id="nearArrow"></i></button>
-    <div class="m-near-info"><div class="m-near-label">Nearest stop</div><div class="m-near-name">${escapeHtml(n.stop)}</div></div>
-    <div class="m-near-dist"><span id="nearDist">–</span><small>m</small></div>
+  const here = n.dist < HERE_M;
+  const label = i === 0 ? 'Nearest stop' : 'Also nearby';
+  const compass = here
+    ? `<div class="m-near-compass m-here-pin"><i class="fa-solid fa-person-walking"></i></div>`
+    : `<button class="m-near-compass" data-compass aria-label="Point to ${escapeHtml(n.stop)}"><i class="fa-solid fa-arrow-up m-near-arrow"></i></button>`;
+  const dist = here
+    ? `<span class="m-near-here"><i class="fa-solid fa-location-dot"></i> You're here</span>`
+    : `<span class="m-near-distval">–</span><small>m</small>`;
+  return `<div class="m-near ${here ? 'm-here' : ''}" data-idx="${i}" data-near-stop="${escapeHtml(n.stop)}">
+    ${compass}
+    <div class="m-near-info"><div class="m-near-label">${label}</div><div class="m-near-name">${escapeHtml(n.stop)}</div></div>
+    <div class="m-near-dist">${dist}</div>
     ${tracked
       ? '<span class="m-near-tag"><i class="fa-solid fa-check"></i></span>'
       : `<button class="m-near-add" data-near-add="${escapeHtml(n.stop)}">Track</button>`}
   </div>`;
+}
+function nearestCardHtml() {
+  if (!IS_MOBILE()) return '';
+  if (!geoNearestList.length) {
+    if (geoState === 'denied') return `<button class="m-near m-near-off" data-geo-enable><i class="fa-solid fa-location-dot"></i> Enable location for your nearest stops</button>`;
+    return '';
+  }
+  return geoNearestList.map(oneNearCard).join('');
 }
 function animateNumber(el, to) {
   const cur = parseInt(el.textContent, 10);
@@ -2337,19 +2360,44 @@ function animateNumber(el, to) {
   };
   el._raf = requestAnimationFrame(step);
 }
-function updateNearestArrow() {
-  const a = document.getElementById('nearArrow');
-  if (!a || !geoNearest) return;
-  const rot = (geoNearest.bearing - (geoHeading || 0) + 360) % 360;
-  a.style.transform = 'rotate(' + rot.toFixed(0) + 'deg)';
+// Rotate the arrow along the SHORTEST path by accumulating an unwrapped angle on
+// the element (so 359°→1° turns +2°, not −358°, avoiding the full-circle spin).
+function setArrowRotation(el, target) {
+  if (typeof el._rot !== 'number') {            // first apply: snap, no spin
+    el._rot = target;
+    el.style.transition = 'none';
+    el.style.transform = 'rotate(' + target.toFixed(1) + 'deg)';
+    void el.offsetWidth;
+    el.style.transition = '';
+    return;
+  }
+  const delta = (((target - norm360(el._rot)) + 540) % 360) - 180;  // −180..180
+  el._rot += delta;
+  el.style.transform = 'rotate(' + el._rot.toFixed(1) + 'deg)';
+}
+function updateNearestArrow(card, n) {
+  const a = card.querySelector('.m-near-arrow');
+  if (!a) return;   // "you're here" cards have a static pin, no arrow
+  setArrowRotation(a, norm360(n.bearing - (geoHeading || 0)));
   const c = a.closest('.m-near-compass');
   if (c) c.classList.toggle('m-compass-live', geoHeading != null);
 }
+function updateAllArrows() {
+  document.querySelectorAll('#depBoard .m-near[data-idx]').forEach((card) => {
+    const n = geoNearestList[+card.dataset.idx];
+    if (n) updateNearestArrow(card, n);
+  });
+}
 function updateNearestLive() {
-  if (!geoNearest) return;
-  const el = document.getElementById('nearDist');
-  if (el) animateNumber(el, Math.round(geoNearest.dist));
-  updateNearestArrow();
+  document.querySelectorAll('#depBoard .m-near[data-idx]').forEach((card) => {
+    const n = geoNearestList[+card.dataset.idx];
+    if (!n) return;
+    if (n.dist >= HERE_M) {
+      const el = card.querySelector('.m-near-distval');
+      if (el) animateNumber(el, Math.round(n.dist));
+    }
+    updateNearestArrow(card, n);
+  });
 }
 
 /* ===== Stop picker (searchable bottom sheet) ===== */
