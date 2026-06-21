@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signing in… — NUS ISB</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#003d7c">
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
+
+<!--
+  /auth-callback/ — landing page for the AHL member-login flow (shared broker
+  ahl-site-appscript). Third stop on a round-trip:
+    (1) index.html's ahlLogin() navigated the tab to the broker webapp.
+    (2) The broker read the user's Workspace identity (Session.getActiveUser),
+        then redirected the tab here with identity fields in the URL hash.
+    (3) This page verifies the nonce, caches the identity in sessionStorage,
+        and redirects the tab back to '/'.
+  Storage keys MUST match index.html's AHL_* constants. Everything is inline so
+  the page unloads within ~100ms.
+-->
+
+<style>
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(135deg, #003d7c 0%, #00509e 100%);
+  color: #fff;
+}
+body { display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+.card {
+  background: rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 16px; padding: 28px 36px; max-width: 420px;
+}
+h1 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+p  { font-size: 14px; line-height: 1.55; opacity: .85; margin: 0; }
+.dot {
+  display: inline-block; width: 8px; height: 8px; margin-right: 6px;
+  background: #fff; border-radius: 50%; vertical-align: baseline;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+button {
+  margin-top: 14px; padding: 8px 18px; background: #fff; color: #003d7c;
+  font-weight: 600; border: 0; border-radius: 999px; cursor: pointer; font-size: 13px;
+}
+.err { background: rgba(0, 0, 0, .3); }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <h1><span class="dot"></span>Finishing sign-in…</h1>
+  <p>Redirecting you back to NUS ISB.</p>
+</div>
+
+<script>
+/* Storage keys — MUST match index.html's AHL_* constants. */
+var STORAGE_KEY = 'ahl-auth-v1';
+var NONCE_KEY   = 'ahl-auth-nonce-v1';
+var RETURN_KEY  = 'ahl-auth-return-v1';
+var DOMAIN      = 'ahlab.org';
+
+(function () {
+  var card = document.getElementById('card');
+
+  function fail(title, msg) {
+    card.classList.add('err');
+    card.innerHTML =
+      '<h1>' + title + '</h1>' +
+      '<p>' + msg + '</p>' +
+      '<button type="button" id="goHome">Back to NUS ISB</button>';
+    document.getElementById('goHome').addEventListener('click', function () {
+      location.replace('/');
+    });
+  }
+
+  // ── Parse the hash: #email=...&name=...&picture=...&nonce=...&ts=...&token=... ──
+  var hash = String(location.hash || '').replace(/^#/, '');
+  if (!hash) {
+    fail('Nothing to finish',
+      'This page is the landing target for the sign-in flow. ' +
+      'If you reached it some other way, no action is needed.');
+    return;
+  }
+
+  var params = {};
+  hash.split('&').forEach(function (pair) {
+    var idx = pair.indexOf('=');
+    if (idx === -1) return;
+    try {
+      params[decodeURIComponent(pair.slice(0, idx))] = decodeURIComponent(pair.slice(idx + 1));
+    } catch (e) { /* malformed fragment */ }
+  });
+
+  var email = (params.email || '').toLowerCase();
+  var name = params.name || '';
+  var picture = params.picture || '';
+  var nonce = params.nonce || '';
+  var token = params.token || '';
+  var ts = parseInt(params.ts, 10) || Date.now();
+
+  if (!email || !nonce) {
+    fail('Incomplete sign-in', 'The sign-in response was missing required fields. Please try again.');
+    return;
+  }
+  if (email.indexOf('@' + DOMAIN, email.length - ('@' + DOMAIN).length) === -1) {
+    fail('Not an AHL account',
+      'NUS ISB is restricted to @' + DOMAIN + ' members. Please sign in with your AHL account.');
+    return;
+  }
+
+  // ── Verify the nonce (single-use; survives the cross-origin round-trip in localStorage) ──
+  var expected;
+  try { expected = localStorage.getItem(NONCE_KEY); } catch (e) { expected = null; }
+  if (!expected || expected !== nonce) {
+    fail('Expired or invalid sign-in',
+      'This sign-in link is no longer valid. Please start over from NUS ISB.');
+    return;
+  }
+  try { localStorage.removeItem(NONCE_KEY); } catch (e) {}
+
+  // ── Cache the identity (sessionStorage → dies with the tab) ──
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+      email: email, name: name || email, picture: picture, person: null, token: token, ts: ts
+    }));
+  } catch (e) {
+    fail('Storage unavailable',
+      'Your browser blocked session storage. Sign-in needs sessionStorage; try a regular (non-private) window.');
+    return;
+  }
+
+  // ── Redirect back into the app ──
+  var returnPath;
+  try { returnPath = localStorage.getItem(RETURN_KEY); } catch (e) { returnPath = null; }
+  try { localStorage.removeItem(RETURN_KEY); } catch (e) {}
+  if (!returnPath ||
+      returnPath.charAt(0) !== '/' ||
+      returnPath.charAt(1) === '/' ||
+      returnPath.indexOf('/auth-callback/') === 0) {
+    returnPath = '/';
+  }
+  location.replace(returnPath);
+})();
+</script>
+
+</body>
+</html>

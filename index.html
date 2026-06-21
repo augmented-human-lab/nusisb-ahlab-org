@@ -3,7 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NUS ISB</title>
+<title>NUS ISB — Internal Shuttle Bus tracker</title>
+<meta name="description" content="Live NUS Internal Shuttle Bus tracker — real-time arrivals, routes and bus positions across the NUS campus. For AHL members.">
+<link rel="canonical" href="https://nusisb.ahlab.org/">
+
+<!-- Open Graph (Facebook, WhatsApp, LinkedIn, …) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NUS ISB">
+<meta property="og:title" content="NUS ISB — Internal Shuttle Bus tracker">
+<meta property="og:description" content="Live shuttle arrivals, routes and bus positions across the NUS campus.">
+<meta property="og:url" content="https://nusisb.ahlab.org/">
+<meta property="og:image" content="https://nusisb.ahlab.org/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NUS ISB — NUS Internal Shuttle Bus tracker">
+<meta property="og:locale" content="en_SG">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NUS ISB — Internal Shuttle Bus tracker">
+<meta name="twitter:description" content="Live shuttle arrivals, routes and bus positions across the NUS campus.">
+<meta name="twitter:image" content="https://nusisb.ahlab.org/og-image.png">
+
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#003d7c">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -323,6 +344,53 @@
   #mobileBlock h1 { font-size: 1.35rem; font-weight: 700; color: var(--primary); }
   #mobileBlock p { font-size: 0.98rem; color: var(--text-muted); max-width: 22rem; line-height: 1.55; }
   #mobileBlock .mb-brand { color: var(--text); font-weight: 700; }
+
+  /* AHL sign-in gate — overlays the dashboard until an @ahlab.org account signs in.
+     z-index sits below #mobileBlock (100000) so phones still see "coming soon". */
+  #authGate {
+    position: fixed; inset: 0; z-index: 90000;
+    display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    background:
+      radial-gradient(120% 120% at 100% 0%, rgba(239,124,0,0.10), transparent 55%),
+      linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%);
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  body.ahl-authed #authGate { display: none; }
+  #authGate .gate-card {
+    width: 100%; max-width: 25rem; background: var(--card);
+    border-radius: 20px; padding: 2.4rem 2rem; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 18px 50px rgba(0,0,0,0.22);
+  }
+  #authGate .gate-icon {
+    width: 4.5rem; height: 4.5rem; margin: 0 auto 1.3rem; border-radius: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%);
+    color: #fff; font-size: 1.9rem;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(0,61,124,0.28);
+  }
+  #authGate h1 { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
+  #authGate p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 1.5rem; }
+  #authGate p b { color: var(--text); font-weight: 700; }
+  #authGate .gate-signin {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+    width: 100%; padding: 0.85rem 1.2rem; border: 0; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 0.98rem; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%);
+    box-shadow: 0 6px 18px rgba(0,61,124,0.28);
+    transition: transform 0.06s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  }
+  #authGate .gate-signin:hover { box-shadow: 0 8px 22px rgba(0,61,124,0.36); }
+  #authGate .gate-signin:active { transform: translateY(1px); }
+  #authGate .gate-signin[disabled] { opacity: 0.6; cursor: default; }
+  #authGate .gate-signin i { font-size: 1.05rem; }
+  #authGate .gate-err {
+    display: none; margin-bottom: 1.1rem; padding: 0.7rem 0.9rem; border-radius: 12px;
+    background: rgba(217,70,82,0.08); border: 1px solid rgba(217,70,82,0.25);
+    color: var(--high); font-size: 0.86rem; line-height: 1.45; text-align: left;
+  }
+  #authGate.has-error .gate-err { display: block; }
+  #authGate .gate-foot { margin-top: 1.4rem; font-size: 0.78rem; color: var(--text-muted); }
   .eta-min { font-weight: 700; color: var(--accent); white-space: nowrap; }
   .eta-imminent { color: var(--high); }
 
@@ -1261,6 +1329,20 @@
   <div class="mb-icon"><i class="fa-solid fa-desktop"></i></div>
   <h1>Mobile UI is coming soon</h1>
   <p>The <span class="mb-brand">NUS ISB</span> dashboard is optimised for desktop. Please open it in a desktop browser for now.</p>
+</div>
+
+<!-- AHL sign-in gate — revealed by default; ahlAuth() hides it once an @ahlab.org account signs in -->
+<div id="authGate" role="dialog" aria-modal="true" aria-label="Sign in to NUS ISB">
+  <div class="gate-card">
+    <div class="gate-icon"><i class="fa-solid fa-bus"></i></div>
+    <h1>NUS ISB</h1>
+    <p>The Internal Shuttle Bus tracker is for <b>@ahlab.org</b> members. Sign in with your AHL Google account to continue.</p>
+    <div class="gate-err" id="gateErr"></div>
+    <button type="button" class="gate-signin" id="gateBtn">
+      <i class="fa-brands fa-google"></i> Sign in with your AHL account
+    </button>
+    <div class="gate-foot">Augmented Human Lab</div>
+  </div>
 </div>
 <script>
   // Detect actual mobile devices (not just narrow desktop windows): mobile UA, or
@@ -2379,16 +2461,23 @@ const initHash = location.hash.replace('#', '').toLowerCase();
 const initView = HASH_TO_VIEW[initHash] || 'shuttle';
 switchView(initView, true);
 
-loadConfig();
-refresh();
-loadStopRoutes();
-loadStopCoords();
-loadRouteGeometry();
-loadMapMeta();
-setInterval(refresh, REFRESH_INTERVAL_MS);
-setInterval(loadStopCoords, 60000);
-setInterval(tickShuttleTimes, 1000);
-setInterval(tickFetchWedge, 500);
+// Data loading + polling start only after the AHL sign-in gate is cleared
+// (ahlAuth() calls startApp on success). Guarded so it runs at most once.
+let __appStarted = false;
+function startApp() {
+  if (__appStarted) return;
+  __appStarted = true;
+  loadConfig();
+  refresh();
+  loadStopRoutes();
+  loadStopCoords();
+  loadRouteGeometry();
+  loadMapMeta();
+  setInterval(refresh, REFRESH_INTERVAL_MS);
+  setInterval(loadStopCoords, 60000);
+  setInterval(tickShuttleTimes, 1000);
+  setInterval(tickFetchWedge, 500);
+}
 
 renderRouteToggles();
 document.getElementById('routeToggles')?.addEventListener('click', (e) => {
@@ -2445,6 +2534,77 @@ document.getElementById('mapRefreshBtn')?.addEventListener('click', async () => 
     btn.classList.remove('spinning');
   }
 });
+
+/* ==== AHL sign-in gate (Apps Script member-login broker) ====
+   Same pattern as new.ahlab.org: no GCP OAuth client. A full-page redirect to
+   the shared AHL broker (ahl-site-appscript) reads the visitor's Workspace
+   identity server-side via Session.getActiveUser(), then redirects back to
+   /auth-callback/ with the identity in the URL fragment. Only @ahlab.org members
+   get past the broker; everyone else hits its "Not an AHLab member" page.
+
+   This gates the UI only — the bus-data proxy stays ANYONE_ANONYMOUS so the
+   browser can still fetch() it cross-origin. The session lives in sessionStorage
+   (dies with the tab); /auth-callback/ writes it. See README → "AHL sign-in gate".
+
+   Backend setup (one-time): add https://nusisb.ahlab.org/auth-callback/ to
+   ALLOWED_RETURN_URLS in ahl-site-appscript/Code.js and redeploy the broker. */
+const AHL_BROKER_URL  = 'https://script.google.com/a/macros/ahlab.org/s/AKfycbwHPIr3JR0ZQ9471E1W0KqM-BggXLv8g8wvx0Z3Qwjx2HajD71gBf60CxrJBcrN_51T/exec';
+const AHL_DOMAIN      = 'ahlab.org';
+const AHL_SESSION_KEY = 'ahl-auth-v1';        // identity cache — must match auth-callback
+const AHL_NONCE_KEY   = 'ahl-auth-nonce-v1';  // in-flight round-trip state (localStorage)
+const AHL_RETURN_KEY  = 'ahl-auth-return-v1';
+
+function ahlGetSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(AHL_SESSION_KEY) || 'null');
+    if (s && typeof s.email === 'string' && s.email.toLowerCase().endsWith('@' + AHL_DOMAIN)) return s;
+  } catch (e) {}
+  return null;
+}
+
+function ahlGrant() {
+  document.body.classList.add('ahl-authed');
+  startApp();
+}
+
+function ahlNonce() {
+  try {
+    const buf = new Uint8Array(16);
+    crypto.getRandomValues(buf);
+    return Array.prototype.map.call(buf, (b) => ('0' + b.toString(16)).slice(-2)).join('');
+  } catch (e) {
+    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+}
+
+// Full-page redirect to the broker. It bounces back to /auth-callback/ which
+// stores the identity and returns the tab to '/', where ahlGrant() reveals the app.
+function ahlLogin() {
+  const nonce = ahlNonce();
+  try {
+    localStorage.setItem(AHL_NONCE_KEY, nonce);
+    localStorage.setItem(AHL_RETURN_KEY, '/');
+  } catch (e) {
+    alert('Your browser blocked site storage. Sign-in needs localStorage — please try a regular (non-private) window.');
+    return;
+  }
+  const callback = location.origin + '/auth-callback/';
+  const url = AHL_BROKER_URL +
+    (AHL_BROKER_URL.indexOf('?') === -1 ? '?' : '&') +
+    'return=' + encodeURIComponent(callback) +
+    '&nonce=' + encodeURIComponent(nonce);
+  location.assign(url);
+}
+
+// Boot the gate: phones get the "coming soon" screen instead; a live session
+// reveals the app immediately; otherwise the sign-in button waits for a click.
+if (!document.body.classList.contains('is-mobile')) {
+  if (ahlGetSession()) {
+    ahlGrant();
+  } else {
+    document.getElementById('gateBtn')?.addEventListener('click', ahlLogin);
+  }
+}
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => {
