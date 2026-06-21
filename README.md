@@ -34,10 +34,19 @@ covers the app; clicking *Sign in* navigates the whole tab to the broker, which
 reads the visitor's Workspace identity server-side (`Session.getActiveUser()` —
 trustworthy because the broker webapp is Workspace-gated) and redirects back to
 `/auth-callback/` with the identity in the URL fragment. `auth-callback/` verifies
-a single-use nonce, caches the identity in `sessionStorage`, and returns to `/`,
-where `ahlGrant()` reveals the dashboard (`body.ahl-authed`) and starts polling
-(`startApp()`). Non-`@ahlab.org` visitors hit the broker's "Not an AHLab member"
-page and never get a session.
+a single-use nonce, caches the identity in `localStorage` (7-day TTL, matching the
+broker token), and returns to `/`, where `ahlGrant()` reveals the dashboard
+(`body.ahl-authed`) and starts polling (`startApp()`). Returning visitors on the
+same browser skip the gate entirely until the TTL lapses. Visitors signed into a
+non-`@ahlab.org` Google account get the broker's **account chooser** (a "Choose
+your AHL account" button into Google's `AccountChooser`, which resumes this exact
+login), not a dead-end.
+
+Note: a genuine first sign-in still shows the broker's one-tap **Continue** page
+before bouncing back — Apps Script sandboxes its HTML and only allows
+top-window navigation from a user gesture, so an automatic redirect isn't
+possible (Google's documented restriction). With the localStorage session this is
+seen at most once per 7 days per browser, not on every load.
 
 The `ahlAuth*` / `ahlLogin` functions live at the bottom of `index.html`'s main
 `<script>`; storage keys (`ahl-auth-v1`, …) match `auth-callback/index.html`.

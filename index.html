@@ -2550,14 +2550,20 @@ document.getElementById('mapRefreshBtn')?.addEventListener('click', async () => 
    ALLOWED_RETURN_URLS in ahl-site-appscript/Code.js and redeploy the broker. */
 const AHL_BROKER_URL  = 'https://script.google.com/a/macros/ahlab.org/s/AKfycbwHPIr3JR0ZQ9471E1W0KqM-BggXLv8g8wvx0Z3Qwjx2HajD71gBf60CxrJBcrN_51T/exec';
 const AHL_DOMAIN      = 'ahlab.org';
-const AHL_SESSION_KEY = 'ahl-auth-v1';        // identity cache — must match auth-callback
+const AHL_SESSION_KEY = 'ahl-auth-v1';        // identity cache (localStorage) — must match auth-callback
 const AHL_NONCE_KEY   = 'ahl-auth-nonce-v1';  // in-flight round-trip state (localStorage)
 const AHL_RETURN_KEY  = 'ahl-auth-return-v1';
+const AHL_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days — matches broker token TTL
 
+// Session is cached in localStorage (not sessionStorage) so returning visitors
+// on the same browser skip the gate entirely until the 7-day TTL lapses.
+// Expired/foreign sessions are dropped so the next load re-prompts cleanly.
 function ahlGetSession() {
   try {
-    const s = JSON.parse(sessionStorage.getItem(AHL_SESSION_KEY) || 'null');
-    if (s && typeof s.email === 'string' && s.email.toLowerCase().endsWith('@' + AHL_DOMAIN)) return s;
+    const s = JSON.parse(localStorage.getItem(AHL_SESSION_KEY) || 'null');
+    const fresh = s && typeof s.ts === 'number' && (Date.now() - s.ts) < AHL_SESSION_TTL_MS;
+    if (s && fresh && typeof s.email === 'string' && s.email.toLowerCase().endsWith('@' + AHL_DOMAIN)) return s;
+    if (s) localStorage.removeItem(AHL_SESSION_KEY);
   } catch (e) {}
   return null;
 }

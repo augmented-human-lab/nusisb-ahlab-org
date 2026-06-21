@@ -122,14 +122,15 @@ var DOMAIN      = 'ahlab.org';
   }
   try { localStorage.removeItem(NONCE_KEY); } catch (e) {}
 
-  // ── Cache the identity (sessionStorage → dies with the tab) ──
+  // ── Cache the identity (localStorage → persists across tabs/restarts so the
+  //    gate isn't shown on every load; index.html enforces a 7-day TTL) ──
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
       email: email, name: name || email, picture: picture, person: null, token: token, ts: ts
     }));
   } catch (e) {
     fail('Storage unavailable',
-      'Your browser blocked session storage. Sign-in needs sessionStorage; try a regular (non-private) window.');
+      'Your browser blocked site storage. Sign-in needs localStorage; try a regular (non-private) window.');
     return;
   }
 
