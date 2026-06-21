@@ -84,6 +84,27 @@ regenerate the card after editing `og-card.html`:
 After deploying, re-scrape the link (Facebook Sharing Debugger, or just resend in
 WhatsApp) to refresh the sticky preview cache.
 
+## Performance — first-load latency
+
+Each Apps Script call costs ~1.3–3.6s (302 redirect + runtime + upstream FMS
+fetch), and same-user calls are concurrency-throttled, so the old "fire ~7
+requests and `await Promise.all`" first load took ~6–10s. Fixes:
+
+- **Single `bootstrap` call** (`refreshBootstrap`): in production the app makes
+  *one* request to `nusisb-ahlab-appscript`'s `?action=bootstrap&stops=…`, which
+  returns shuttles + activeBus + busPositions + stopRoutes + announcements in one
+  round-trip (the backend fans out to the FMS server-side). Warm ≈ 2s vs ~6–10s.
+  The local Node dev server has no bootstrap endpoint, so dev falls back to
+  per-endpoint calls (`refreshIndividual`).
+- **Lazy TickerTapes**: the ~106 KB alerts feed is fetched only when the Updates
+  view is opened (`ensureTickers`), not on every load.
+- **Skeletons**: shuttle/buses show shimmer placeholders while the first
+  bootstrap call is in flight, instead of "Loading…".
+- **Keep-warm + cache TTLs** (backend): ActiveBus cache 5s→15s; an optional
+  1-minute `keepWarm` trigger pre-warms the proxy caches. Enable once from the
+  Apps Script editor: run `setupKeepWarmTrigger()` (trade-off: it polls the FMS
+  every minute around the clock).
+
 ## Deploy
 
 Push to `main`; GitHub Pages serves the root. DNS: `nusisb` CNAME → `augmented-human-lab.github.io`.

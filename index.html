@@ -1310,6 +1310,14 @@
      body.is-mobile so the desktop layout is completely untouched.
      ============================================================ */
   .m-live { display: none; }            /* desktop: hidden; shown only on mobile */
+
+  /* Loading skeletons (shimmer) — shown while the first bootstrap call is in flight */
+  .skel { position: relative; overflow: hidden; display: inline-block; background: #e6eaf1; border-radius: 6px; }
+  .skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+    animation: skelShimmer 1.25s ease-in-out infinite; }
+  @keyframes skelShimmer { 100% { transform: translateX(100%); } }
+
   body.is-mobile { overflow: hidden; }
 
   /* App bar — compact, brand always visible */
@@ -1820,6 +1828,7 @@ function switchView(v, skipHash) {
   }
   if (v === 'map') setTimeout(renderMap, 50);
   if (v === 'diagnostics') renderDiagnostics();
+  if (v === 'updates') ensureTickers();   // lazy-load the heavy alerts feed on demand
   renderAll();
 }
 window.addEventListener('hashchange', () => {
@@ -2027,6 +2036,26 @@ function mRouteBadge(route) {
   const fg = disp === 'A2' ? '#1a2433' : '#fff';
   return `<span class="m-rb" style="background:${bg};color:${fg}">${escapeHtml(disp)}</span>`;
 }
+// Skeleton placeholders shown until the first bootstrap response arrives.
+function mSkelRow() {
+  return '<div class="m-deprow">' +
+    '<span class="skel" style="width:34px;height:34px;border-radius:9px;flex:0 0 auto"></span>' +
+    '<div class="m-mid"><span class="skel" style="display:block;width:38%;height:13px;margin-bottom:7px"></span>' +
+    '<span class="skel" style="display:block;width:72%;height:9px"></span></div>' +
+    '<span class="skel" style="width:30px;height:22px"></span></div>';
+}
+function mSkelBusRow() {
+  return '<div class="m-busrow"><span class="skel" style="width:62px;height:24px;flex:0 0 auto"></span>' +
+    '<div class="m-to"><span class="skel" style="display:block;width:55%;height:13px"></span></div>' +
+    '<span class="skel" style="width:38px;height:14px"></span></div>';
+}
+function mSkelBlock() {
+  return '<div class="m-routeblk"><div class="m-rb-head" style="background:#e6eaf1">' +
+    '<span class="skel" style="width:28px;height:28px;border-radius:7px;background:#d3dae4"></span>' +
+    '<div class="m-rb-meta"><span class="skel" style="display:block;width:48px;height:13px;margin-bottom:6px;background:#d3dae4"></span>' +
+    '<span class="skel" style="display:block;width:150px;height:9px;background:#d3dae4"></span></div></div>' +
+    mSkelBusRow() + mSkelBusRow() + '</div>';
+}
 function mStopChipsHtml(stops) {
   const atMax = stops.length >= MAX_STOPS;
   return `<div class="m-chips">` +
@@ -2064,7 +2093,7 @@ function mStopCardHtml(stopName) {
   const term = TERMINAL_STOPS.has(stopName)
     ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.65em;color:var(--text-muted)"></i>' : '';
   if (!data) {
-    return `<div class="m-stopcard"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div><div class="m-sc-sub">Loading…</div></div></div>`;
+    return `<div class="m-stopcard"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div></div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
   }
   const r = data.ShuttleServiceResult || {};
   const shuttles = consolidateShuttles(r.shuttles || []);
@@ -2087,7 +2116,7 @@ function renderShuttlesMobile() {
 }
 function renderBusesMobile() {
   const c = document.getElementById('routeLines');
-  if (!lastActiveBus) { c.innerHTML = '<div class="empty" style="padding:1.5rem;">Loading active buses…</div>'; return; }
+  if (!lastActiveBus) { c.innerHTML = mSkelBlock() + mSkelBlock(); return; }
   const allBuses = ((lastActiveBus.ActiveBusResult || {}).activebus) || [];
   const byPlate = (lastBusPositions && lastBusPositions.byPlate) || {};
   const byRoute = (lastStopRoutes && lastStopRoutes.byRoute) || {};
@@ -2448,23 +2477,62 @@ function tickFetchWedge() {
   wedge.title = remaining > 0 ? `Next refresh in ${remaining}s` : 'Refreshing…';
 }
 
+// TickerTapes is ~106 KB and only used by the Updates view, so it's fetched
+// lazily (on first Updates open) instead of blocking every load's first paint.
+let tickersLoaded = false, tickersLoading = false;
+async function ensureTickers(force) {
+  if (tickersLoading || (tickersLoaded && !force)) return;
+  tickersLoading = true;
+  try { lastTickers = await loadJSON(apiUrl('/api/TickerTapes')); tickersLoaded = true; renderTickers(); }
+  catch (e) { console.warn('TickerTapes', e.message); }
+  finally { tickersLoading = false; }
+}
+
 async function refresh() {
   lastRefreshAt = Date.now();
   const stops = getStops();
+  // Drop cached data for stops no longer selected
+  for (const k of Object.keys(lastShuttles)) {
+    if (!stops.includes(k)) { delete lastShuttles[k]; delete shuttleFetchedAt[k]; }
+  }
+  if (API_BASE) await refreshBootstrap(stops);   // prod: one Apps Script call
+  else          await refreshIndividual(stops);  // dev: local Node server, per-endpoint
+  renderAll();
+  // Keep alerts fresh only while they matter (Updates open, or already fetched).
+  if (currentView === 'updates' || tickersLoaded) ensureTickers(true);
+}
+
+// Prod path: a single /api/bootstrap call returns shuttles + activeBus +
+// busPositions + stopRoutes + announcements in one round-trip (TickerTapes is lazy).
+async function refreshBootstrap(stops) {
+  try {
+    const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(','))));
+    const now = Date.now();
+    if (b.shuttles) for (const s of stops) {
+      if (b.shuttles[s]) { lastShuttles[s] = b.shuttles[s]; shuttleFetchedAt[s] = now; }
+    }
+    if (b.activeBus)     lastActiveBus     = b.activeBus;
+    if (b.busPositions)  lastBusPositions  = b.busPositions;
+    if (b.stopRoutes)    lastStopRoutes    = b.stopRoutes;
+    if (b.announcements) lastAnnouncements = b.announcements;
+    const t = b.activeBus && b.activeBus.ActiveBusResult && b.activeBus.ActiveBusResult.TimeStamp;
+    if (t) latestTs = t;
+  } catch (e) { console.warn('bootstrap', e.message); }
+}
+
+// Dev path: the local Node server has no bootstrap endpoint, so call each
+// endpoint (in parallel). TickerTapes stays lazy here too.
+async function refreshIndividual(stops) {
   const tasks = [
     ...stops.map(stop => [
       `/api/ShuttleService?stop=${encodeURIComponent(stop)}`,
       (d) => { lastShuttles[stop] = d; shuttleFetchedAt[stop] = Date.now(); },
     ]),
-    ['/api/TickerTapes',   (d) => lastTickers = d],
     ['/api/ActiveBus',     (d) => lastActiveBus = d],
     ['/api/Announcements', (d) => lastAnnouncements = d],
     ['/api/BusPositions',  (d) => lastBusPositions = d],
+    ['/api/StopRoutes',    (d) => lastStopRoutes = d],
   ];
-  // Drop cached data for stops no longer selected
-  for (const k of Object.keys(lastShuttles)) {
-    if (!stops.includes(k)) { delete lastShuttles[k]; delete shuttleFetchedAt[k]; }
-  }
   let ts = null;
   await Promise.all(tasks.map(async ([url, save]) => {
     try {
@@ -2476,7 +2544,6 @@ async function refresh() {
     } catch (e) { console.warn(url, e.message); }
   }));
   if (ts) latestTs = ts;
-  renderAll();
 }
 async function loadConfig() {
   // Production (GitHub Pages → Apps Script) has no /api/config and is always prod,
@@ -2700,8 +2767,7 @@ function startApp() {
   if (__appStarted) return;
   __appStarted = true;
   loadConfig();
-  refresh();
-  loadStopRoutes();
+  refresh();                 // bootstrap (prod) now includes StopRoutes
   loadStopCoords();
   loadRouteGeometry();
   loadMapMeta();
