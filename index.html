@@ -326,24 +326,7 @@
   .diag-refresh { margin-left: auto; }
   .diag-card-head { display: flex; align-items: center; gap: 0.5rem; }
 
-  /* Mobile block — the dashboard is desktop-only for now */
-  #mobileBlock { display: none; }
-  body.is-mobile { overflow: hidden; }
-  body.is-mobile > header, body.is-mobile > main { display: none; }
-  body.is-mobile #mobileBlock {
-    display: flex; position: fixed; inset: 0; z-index: 100000;
-    flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; gap: 1.1rem; padding: 2rem;
-    background: var(--bg); color: var(--text);
-  }
-  #mobileBlock .mb-icon {
-    font-size: 2.6rem; color: var(--accent); background: var(--card);
-    width: 5.5rem; height: 5.5rem; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
-  }
-  #mobileBlock h1 { font-size: 1.35rem; font-weight: 700; color: var(--primary); }
-  #mobileBlock p { font-size: 0.98rem; color: var(--text-muted); max-width: 22rem; line-height: 1.55; }
-  #mobileBlock .mb-brand { color: var(--text); font-weight: 700; }
+  /* Mobile layout lives in the "MOBILE LAYOUT" block near the end of this <style>. */
 
   /* AHL sign-in gate — overlays the dashboard until an @ahlab.org account signs in.
      z-index sits below #mobileBlock (100000) so phones still see "coming soon". */
@@ -1320,16 +1303,137 @@
     font-weight: 700;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
+
+  /* ============================================================
+     MOBILE LAYOUT — phone-native UI (body.is-mobile, set by the
+     UA/touch detection script). Everything here is scoped to
+     body.is-mobile so the desktop layout is completely untouched.
+     ============================================================ */
+  .m-live { display: none; }            /* desktop: hidden; shown only on mobile */
+  body.is-mobile { overflow: hidden; }
+
+  /* App bar — compact, brand always visible */
+  body.is-mobile .header-row.header-top { height: auto; padding: 0.5rem 0.9rem 0.7rem; gap: 0.6rem; }
+  body.is-mobile .brand .brand-text { display: inline !important; font-size: 1.05rem; }
+  body.is-mobile .brand i { font-size: 1.15rem; }
+  body.is-mobile .fetch-wedge,
+  body.is-mobile .stop-bar-icon,
+  body.is-mobile header .stop-chips,
+  body.is-mobile .header-right { display: none !important; }
+  body.is-mobile .m-live {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.72rem; font-weight: 600; color: #fff;
+    background: rgba(255,255,255,0.16); padding: 0.3rem 0.6rem; border-radius: 999px;
+  }
+  body.is-mobile .m-live .d { width: 7px; height: 7px; border-radius: 50%; background: #5ce08a;
+    box-shadow: 0 0 0 3px rgba(92,224,138,0.25); }
+
+  /* Scroll body + bottom-nav clearance */
+  body.is-mobile main { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  body.is-mobile .view { height: auto; overflow: visible; display: none; }
+  body.is-mobile .view.active { display: block; }
+  body.is-mobile #shuttleView, body.is-mobile #busesView { padding-bottom: 88px; }
+
+  /* Bottom tab bar — reuses the existing #tabs nav, repositioned */
+  body.is-mobile .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding: 0.35rem 0.2rem env(safe-area-inset-bottom);
+    background: rgba(255,255,255,0.96);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border); box-shadow: 0 -2px 12px rgba(16,24,40,0.06);
+    display: flex; gap: 0; overflow: visible;
+  }
+  body.is-mobile .tabs .tab {
+    flex: 1; flex-direction: column; gap: 3px; padding: 0.35rem 0;
+    background: none; border: 0; border-radius: 0; opacity: 1;
+    color: var(--text-muted); font-size: 0.62rem; font-weight: 600;
+  }
+  body.is-mobile .tabs .tab i { font-size: 1.15rem; }
+  body.is-mobile .tabs .tab:hover, body.is-mobile .tabs .tab:active { background: none; transform: none; }
+  body.is-mobile .tabs .tab.active { background: none; color: var(--primary); font-weight: 700; }
+
+  /* Stop chips (Shuttle) */
+  body.is-mobile #depBoard { display: block; padding: 0.85rem 0.8rem 0; height: auto; }
+  body.is-mobile .m-chips { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.85rem; scrollbar-width: none; }
+  body.is-mobile .m-chips::-webkit-scrollbar { display: none; }
+  body.is-mobile .m-chip {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--primary); color: #fff; border-radius: 999px;
+    padding: 0.4rem 0.5rem 0.4rem 0.8rem; font-size: 0.82rem; font-weight: 600;
+  }
+  body.is-mobile .m-chip button { background: rgba(255,255,255,0.22); border: 0; color: #fff; cursor: pointer;
+    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; }
+  body.is-mobile .m-chip-input {
+    flex: 0 0 auto; min-width: 8.5rem; border: 1px dashed var(--border); background: var(--card);
+    border-radius: 999px; padding: 0.4rem 0.9rem; font: inherit; font-size: 0.82rem; color: var(--text);
+  }
+  body.is-mobile .m-chip-input:focus { outline: none; border-color: var(--primary); border-style: solid; }
+
+  /* Departure stop cards */
+  body.is-mobile .m-stopcard { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 0.85rem; overflow: hidden; }
+  body.is-mobile .m-sc-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.95rem; border-bottom: 1px solid var(--border); }
+  body.is-mobile .m-sc-nm { font-size: 1.05rem; font-weight: 800; }
+  body.is-mobile .m-sc-sub { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+  body.is-mobile .m-deprow { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.95rem; }
+  body.is-mobile .m-deprow + .m-deprow { border-top: 1px solid #f0f3f7; }
+  body.is-mobile .m-mid { flex: 1; min-width: 0; }
+  body.is-mobile .m-dir { font-size: 0.92rem; font-weight: 700; }
+  body.is-mobile .m-via { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.is-mobile .m-eta { text-align: right; flex: 0 0 auto; line-height: 1.05; }
+  body.is-mobile .m-eta .dep-eta { font-size: 1.6rem; font-weight: 800; color: var(--accent); font-feature-settings: 'tnum'; }
+  body.is-mobile .m-eta .dep-eta.critical { color: var(--high); }
+  body.is-mobile .m-eta .dep-eta.soon { color: var(--med); }
+  body.is-mobile .m-eta .dep-eta.arrival { color: var(--primary); }
+  body.is-mobile .m-eta .dep-eta-unit { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
+  body.is-mobile .m-eta .m-then { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.15rem; }
+  body.is-mobile .m-eta .m-eta-na { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+
+  /* Route badge */
+  body.is-mobile .m-rb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; color: #fff;
+    font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+
+  /* Buses — route blocks */
+  body.is-mobile #routeLines { display: block; padding: 0.85rem 0.8rem 0; height: auto; overflow: visible; }
+  body.is-mobile .m-routeblk { background: var(--card); border-radius: 15px; box-shadow: var(--shadow); margin-bottom: 0.8rem; overflow: hidden; }
+  body.is-mobile .m-rb-head { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem; color: #fff; }
+  body.is-mobile .m-rb-head .m-rb { background: rgba(255,255,255,0.22) !important; color: inherit !important; width: 28px; height: 28px; font-size: 0.78rem; }
+  body.is-mobile .m-rb-meta { min-width: 0; }
+  body.is-mobile .m-rb-t { font-weight: 800; font-size: 0.95rem; line-height: 1.1; }
+  body.is-mobile .m-rb-d { font-size: 0.68rem; opacity: 0.92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.is-mobile .m-rb-n { margin-left: auto; flex: 0 0 auto; font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.18); padding: 0.18rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+  body.is-mobile .m-busrow { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem; }
+  body.is-mobile .m-busrow + .m-busrow { border-top: 1px solid #f0f3f7; }
+  body.is-mobile .m-plate { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
+    font-size: 0.74rem; background: #eef1f5; padding: 0.25rem 0.5rem; border-radius: 6px; }
+  body.is-mobile .m-to { flex: 1; min-width: 0; font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.is-mobile .m-st { flex: 0 0 auto; font-size: 0.66rem; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; }
+  body.is-mobile .m-st .m-d2 { width: 7px; height: 7px; border-radius: 50%; }
+  body.is-mobile .m-st.moving { color: #16a34a; } body.is-mobile .m-st.moving .m-d2 { background: #16a34a; }
+  body.is-mobile .m-st.stopped { color: #8a93a1; } body.is-mobile .m-st.stopped .m-d2 { background: #9aa3b0; }
+  body.is-mobile .m-et { flex: 0 0 auto; min-width: 2.4rem; text-align: right; font-size: 0.92rem; font-weight: 800; color: var(--accent); font-feature-settings: 'tnum'; }
+
+  /* Updates — full-width cards */
+  body.is-mobile #updatesView .view-scroll { height: auto; overflow: visible; padding: 0.85rem 0.8rem 88px; }
+  body.is-mobile #updatesView .card { margin-bottom: 0.85rem; }
+
+  /* Map — stacked map + route chips (uses the existing ≤700px responsive rules) */
+  body.is-mobile #mapView { padding-bottom: 88px; }
+  body.is-mobile #mapView .route-toggles { padding: 0.6rem 0.7rem; gap: 0.45rem; }
+  body.is-mobile #mapView .map-stage { width: min(96vw, calc(64vh * 16 / 9)); margin-top: 0.7rem; }
+
+  /* Diagnostics — stacked table rows become cards */
+  body.is-mobile #diagnosticsView .view-scroll { height: auto; overflow: visible; padding: 0.85rem 0.8rem 88px; }
+  body.is-mobile .diag-table, body.is-mobile .diag-table tbody { display: block; width: 100%; }
+  body.is-mobile .diag-table thead { display: none; }
+  body.is-mobile .diag-table tr { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem;
+    padding: 0.6rem 0; border-top: 1px solid #f0f3f7; }
+  body.is-mobile .diag-table tr:first-child { border-top: 0; }
+  body.is-mobile .diag-table td { display: inline-flex; align-items: center; padding: 0; border: 0; }
+  body.is-mobile .diag-table td:first-child { flex: 1 0 100%; font-weight: 600; font-size: 0.86rem; }
 </style>
 </head>
 <body data-mode="unknown">
-
-<!-- Desktop-only gate: phones get a "coming soon" message instead of the dashboard -->
-<div id="mobileBlock" role="alertdialog" aria-label="Desktop only">
-  <div class="mb-icon"><i class="fa-solid fa-desktop"></i></div>
-  <h1>Mobile UI is coming soon</h1>
-  <p>The <span class="mb-brand">NUS ISB</span> dashboard is optimised for desktop. Please open it in a desktop browser for now.</p>
-</div>
 
 <!-- AHL sign-in gate — revealed by default; ahlAuth() hides it once an @ahlab.org account signs in -->
 <div id="authGate" role="dialog" aria-modal="true" aria-label="Sign in to NUS ISB">
@@ -1360,6 +1464,7 @@
 <header>
   <div class="header-row header-top">
     <div class="brand"><i class="fa-solid fa-bus"></i> <span class="brand-text">NUS ISB</span></div>
+    <span class="m-live"><span class="d"></span> live</span>
     <div class="fetch-wedge" id="fetchWedge" title="Next refresh"></div>
     <nav class="tabs" id="tabs">
       <button class="tab" data-view="shuttle"><i class="fa-solid fa-route"></i> Shuttle</button>
@@ -1434,6 +1539,8 @@
 /* ==== utilities ==== */
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+// Phones get the mobile layout (class set by the UA/touch detection script in <body>).
+const IS_MOBILE = () => document.body.classList.contains('is-mobile');
 const fmtTime = (iso) => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -1902,6 +2009,7 @@ function depStopHtml(stopName) {
 }
 
 function renderShuttles() {
+  if (IS_MOBILE()) return renderShuttlesMobile();
   const board = document.getElementById('depBoard');
   const stops = getStops();
   board.style.setProperty('--cols', Math.max(1, stops.length));
@@ -1910,6 +2018,105 @@ function renderShuttles() {
     return;
   }
   board.innerHTML = stops.map(depStopHtml).join('');
+}
+
+/* ==== mobile renderers (phone-native; reuse the same data + helpers) ==== */
+function mRouteBadge(route) {
+  const disp = displayRouteName(route);
+  const bg = isPublicRoute(route) ? '#6b7280' : (ROUTE_COLORS[disp] || '#4b5563');
+  const fg = disp === 'A2' ? '#1a2433' : '#fff';
+  return `<span class="m-rb" style="background:${bg};color:${fg}">${escapeHtml(disp)}</span>`;
+}
+function mStopChipsHtml(stops) {
+  const atMax = stops.length >= MAX_STOPS;
+  return `<div class="m-chips">` +
+    stops.map((s) =>
+      `<span class="m-chip">${escapeHtml(s)}<button data-remove="${escapeHtml(s)}" aria-label="Remove ${escapeHtml(s)}"><i class="fa-solid fa-xmark"></i></button></span>`
+    ).join('') +
+    (atMax ? '' : `<input class="m-chip-input" list="stopList" placeholder="+ Add stop" autocomplete="off" spellcheck="false">`) +
+    `</div>`;
+}
+function mDepRow(s, fetched) {
+  const route = s.name || '?';
+  const disp = displayRouteName(route);
+  const etas = s._etas || [];
+  const next = etas[0];
+  const following = etas[1];
+  const desc = ROUTE_DESCRIPTION[disp] || (isPublicRoute(route) ? 'Public bus' : '');
+  if (!next || typeof next.eta_s !== 'number') {
+    return `<div class="m-deprow">${mRouteBadge(route)}
+      <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+      <div class="m-eta"><span class="m-eta-na">No buses</span></div></div>`;
+  }
+  const sec = Math.max(0, next.eta_s);
+  const then = (following && typeof following.eta_s === 'number')
+    ? `<div class="m-then">then ${etaLabel(Math.max(0, following.eta_s))}</div>` : '';
+  return `<div class="m-deprow">${mRouteBadge(route)}
+    <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+    <div class="m-eta">
+      <span class="dep-eta ${etaCriticality(sec, route)}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(route)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span>
+      ${then}
+    </div></div>`;
+}
+function mStopCardHtml(stopName) {
+  const data = lastShuttles[stopName];
+  const fetched = shuttleFetchedAt[stopName] || Date.now();
+  const term = TERMINAL_STOPS.has(stopName)
+    ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.65em;color:var(--text-muted)"></i>' : '';
+  if (!data) {
+    return `<div class="m-stopcard"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div><div class="m-sc-sub">Loading…</div></div></div>`;
+  }
+  const r = data.ShuttleServiceResult || {};
+  const shuttles = consolidateShuttles(r.shuttles || []);
+  shuttles.sort((a, b) =>
+    ((a._etas[0] && a._etas[0].eta_s) ?? Infinity) - ((b._etas[0] && b._etas[0].eta_s) ?? Infinity));
+  const rows = shuttles.length
+    ? shuttles.map((s) => mDepRow(s, fetched)).join('')
+    : '<div class="empty" style="padding:1rem 0.95rem;">No services running here right now.</div>';
+  return `<div class="m-stopcard">
+    <div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div><div class="m-sc-sub">${shuttles.length} service${shuttles.length === 1 ? '' : 's'}</div></div>
+    ${rows}</div>`;
+}
+function renderShuttlesMobile() {
+  const board = document.getElementById('depBoard');
+  const stops = getStops();
+  const chips = mStopChipsHtml(stops);
+  board.innerHTML = chips + (stops.length
+    ? stops.map(mStopCardHtml).join('')
+    : '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>');
+}
+function renderBusesMobile() {
+  const c = document.getElementById('routeLines');
+  if (!lastActiveBus) { c.innerHTML = '<div class="empty" style="padding:1.5rem;">Loading active buses…</div>'; return; }
+  const allBuses = ((lastActiveBus.ActiveBusResult || {}).activebus) || [];
+  const byPlate = (lastBusPositions && lastBusPositions.byPlate) || {};
+  const byRoute = (lastStopRoutes && lastStopRoutes.byRoute) || {};
+  const blocks = INTERNAL_ROUTES.map((route) => {
+    const buses = allBuses.filter((b) => b._route === route);
+    if (!buses.length) return '';
+    const { sequence } = buildRouteSequence(route, byRoute[route] || []);
+    const rows = buses.map((b) => {
+      const upcoming = byPlate[b.vehplate] || [];
+      const next = upcoming.find((u) => u.route === route && sequence.includes(u.stop)) || upcoming[0];
+      const ss = speedStatus(b.speed);
+      const eta = next && typeof next.eta_s === 'number' ? shortEtaLabel(next.eta_s) : '—';
+      const to = next ? `→ ${escapeHtml(next.stop)}` : '<span style="color:var(--text-muted);font-weight:500">locating…</span>';
+      return `<div class="m-busrow">
+        <span class="m-plate">${escapeHtml(b.vehplate || '?')}</span>
+        <div class="m-to">${to}</div>
+        <span class="m-st ${ss.cls === 'stopped' ? 'stopped' : 'moving'}"><span class="m-d2"></span>${ss.label}</span>
+        <span class="m-et">${eta}</span></div>`;
+    }).join('');
+    const bg = ROUTE_COLORS[route] || '#4b5563';
+    const fg = route === 'A2' ? '#1a2433' : '#fff';
+    return `<div class="m-routeblk">
+      <div class="m-rb-head" style="background:${bg};color:${fg}">
+        <span class="m-rb">${escapeHtml(route)}</span>
+        <div class="m-rb-meta"><div class="m-rb-t">${escapeHtml(route)}</div><div class="m-rb-d">${escapeHtml(ROUTE_DESCRIPTION[route] || '')}</div></div>
+        <span class="m-rb-n">${buses.length} bus${buses.length === 1 ? '' : 'es'}</span>
+      </div>${rows}</div>`;
+  }).filter(Boolean).join('');
+  c.innerHTML = blocks || '<div class="empty" style="padding:1.5rem;">No buses currently in service.</div>';
 }
 
 function tickShuttleTimes() {
@@ -2114,6 +2321,7 @@ function renderMap() {
 
 /* ==== render: buses (vertical columns) ==== */
 function renderBuses() {
+  if (IS_MOBILE()) return renderBusesMobile();
   const container = document.getElementById('routeLines');
   if (!lastActiveBus) { container.innerHTML = '<div class="empty">Loading active buses…</div>'; return; }
   const allBuses = ((lastActiveBus.ActiveBusResult || {}).activebus) || [];
@@ -2441,6 +2649,30 @@ document.getElementById('tabs').addEventListener('click', (e) => {
   if (t && t.dataset.view) switchView(t.dataset.view);
 });
 
+// Mobile stop chips live inside the Shuttle view (#depBoard) — mirror the header
+// chip handlers (remove on ✕, add on Enter or datalist selection).
+const depBoardEl = document.getElementById('depBoard');
+depBoardEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-remove]');
+  if (!btn) return;
+  setStops(getStops().filter((x) => x !== btn.dataset.remove));
+  renderStopChips();
+  renderShuttles();
+  refresh();
+});
+depBoardEl.addEventListener('keydown', (e) => {
+  const input = e.target.closest('.m-chip-input');
+  if (!input || e.key !== 'Enter') return;
+  e.preventDefault();
+  tryAddStop(input.value.trim().toUpperCase(), input);
+});
+depBoardEl.addEventListener('input', (e) => {
+  const input = e.target.closest('.m-chip-input');
+  if (!input) return;
+  const v = input.value.trim().toUpperCase();
+  if (KNOWN_STOPS.has(v)) tryAddStop(v, input);
+});
+
 // Left/Right arrow keys cycle through views (skip when typing in a form field).
 const VIEW_ORDER = ['shuttle', 'buses', 'map', 'updates', 'diagnostics'];
 document.addEventListener('keydown', (e) => {
@@ -2543,8 +2775,8 @@ document.getElementById('mapRefreshBtn')?.addEventListener('click', async () => 
    get past the broker; everyone else hits its "Not an AHLab member" page.
 
    This gates the UI only — the bus-data proxy stays ANYONE_ANONYMOUS so the
-   browser can still fetch() it cross-origin. The session lives in sessionStorage
-   (dies with the tab); /auth-callback/ writes it. See README → "AHL sign-in gate".
+   browser can still fetch() it cross-origin. The session lives in localStorage
+   (7-day TTL); /auth-callback/ writes it. See README → "AHL sign-in gate".
 
    Backend setup (one-time): add https://nusisb.ahlab.org/auth-callback/ to
    ALLOWED_RETURN_URLS in ahl-site-appscript/Code.js and redeploy the broker. */
@@ -2602,14 +2834,12 @@ function ahlLogin() {
   location.assign(url);
 }
 
-// Boot the gate: phones get the "coming soon" screen instead; a live session
-// reveals the app immediately; otherwise the sign-in button waits for a click.
-if (!document.body.classList.contains('is-mobile')) {
-  if (ahlGetSession()) {
-    ahlGrant();
-  } else {
-    document.getElementById('gateBtn')?.addEventListener('click', ahlLogin);
-  }
+// Boot the gate (desktop + mobile): a live session reveals the app immediately;
+// otherwise the sign-in button waits for a click.
+if (ahlGetSession()) {
+  ahlGrant();
+} else {
+  document.getElementById('gateBtn')?.addEventListener('click', ahlLogin);
 }
 
 if ('serviceWorker' in navigator) {

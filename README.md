@@ -8,6 +8,12 @@ Static single-page PWA (no build step). All live data comes from the Apps Script
 backend **`nusisb-ahlab-appscript`**, which hides the ConnectX FMS token; this repo
 ships no secrets.
 
+Responsive: desktop gets the multi-column departure board; phones (detected via
+`body.is-mobile`) get a phone-native layout — compact app bar, vertical cards, and
+a bottom tab bar — rendered by parallel `*Mobile()` functions that reuse the same
+data and helpers. All mobile styling is scoped under `body.is-mobile`, so the
+desktop layout is untouched.
+
 ## How it talks to the backend
 
 `index.html` sets `window.API_BASE` to the backend's Apps Script `/exec` URL. The
