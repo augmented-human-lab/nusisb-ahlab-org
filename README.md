@@ -14,6 +14,18 @@ a bottom tab bar — rendered by parallel `*Mobile()` functions that reuse the s
 data and helpers. All mobile styling is scoped under `body.is-mobile`, so the
 desktop layout is untouched.
 
+Mobile Stops view extras (all `body.is-mobile`-gated):
+
+- **Install banner** — captures `beforeinstallprompt` and shows an "Install App"
+  card; on iOS (no prompt API) shows Add-to-Home-Screen instructions. Hidden once
+  installed (`display-mode: standalone`) or dismissed.
+- **Nearest stop** — `navigator.geolocation.watchPosition` finds the closest stop
+  from `stop-coords.json`, showing an animated metres count and a compass arrow
+  (rotated by `bearing − deviceHeading`; tap the compass to grant the iOS
+  `DeviceOrientation` permission). Degrades gracefully if location is denied.
+- **Stop picker** — "Add a stop" opens a searchable bottom sheet (`#stopPicker`)
+  listing every stop, marking already-tracked ones and capping at `MAX_STOPS`.
+
 ## How it talks to the backend
 
 `index.html` sets `window.API_BASE` to the backend's Apps Script `/exec` URL. The

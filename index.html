@@ -1384,6 +1384,87 @@
   }
   body.is-mobile .m-chip-input:focus { outline: none; }
   body.is-mobile .m-addbar-full { justify-content: center; font-size: 0.82rem; }
+  /* "Add a stop" button (opens the picker) */
+  body.is-mobile .m-addbtn {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;
+    margin-bottom: 0.85rem; padding: 0.7rem 1rem; border: 1px dashed var(--border); border-radius: 14px;
+    background: var(--card); color: var(--primary); font: inherit; font-size: 0.92rem; font-weight: 600;
+    cursor: pointer; box-shadow: var(--shadow);
+  }
+  body.is-mobile .m-addbtn:active { transform: scale(0.99); }
+
+  /* Install banner */
+  body.is-mobile .m-install {
+    display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.85rem; padding: 0.7rem 0.85rem;
+    border-radius: 14px; color: #fff; box-shadow: var(--shadow);
+    background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  }
+  body.is-mobile .m-install-ic { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; display: flex;
+    align-items: center; justify-content: center; background: rgba(255,255,255,0.18); font-size: 1rem; }
+  body.is-mobile .m-install-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  body.is-mobile .m-install-tx b { font-size: 0.92rem; }
+  body.is-mobile .m-install-tx span { font-size: 0.74rem; opacity: 0.9; }
+  body.is-mobile .m-install-btn { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 0.45rem 0.9rem;
+    background: #fff; color: var(--primary); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+  body.is-mobile .m-install-x { flex: 0 0 auto; width: 26px; height: 26px; border: 0; border-radius: 50%;
+    background: rgba(255,255,255,0.16); color: #fff; cursor: pointer; font-size: 0.7rem; }
+
+  /* Nearest-stop card + compass */
+  body.is-mobile .m-near {
+    display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.85rem; padding: 0.7rem 0.9rem;
+    border-radius: 16px; background: var(--card); box-shadow: var(--shadow);
+    border: 1px solid rgba(0,61,124,0.14); width: 100%; text-align: left;
+  }
+  body.is-mobile .m-near-off { justify-content: center; gap: 0.5rem; color: var(--primary); font: inherit;
+    font-size: 0.86rem; font-weight: 600; cursor: pointer; border-style: dashed; }
+  body.is-mobile .m-near-compass {
+    flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--border);
+    background: #f3f6fb; color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; cursor: pointer;
+  }
+  body.is-mobile .m-near-compass.m-compass-live { border-color: var(--accent); color: var(--accent); }
+  body.is-mobile #nearArrow { transition: transform 0.25s ease-out; }
+  body.is-mobile .m-near-info { flex: 1; min-width: 0; }
+  body.is-mobile .m-near-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+  body.is-mobile .m-near-name { font-size: 1.05rem; font-weight: 800; }
+  body.is-mobile .m-near-dist { flex: 0 0 auto; text-align: right; color: var(--accent); font-weight: 800; }
+  body.is-mobile .m-near-dist span { font-size: 1.4rem; font-feature-settings: 'tnum'; }
+  body.is-mobile .m-near-dist small { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
+  body.is-mobile .m-near-add { flex: 0 0 auto; margin-left: 0.5rem; border: 0; border-radius: 999px;
+    padding: 0.4rem 0.85rem; background: var(--primary); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  body.is-mobile .m-near-tag { flex: 0 0 auto; margin-left: 0.5rem; width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(42,157,143,0.15); color: var(--low); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+
+  /* Stop picker (bottom sheet) */
+  #stopPicker { position: fixed; inset: 0; z-index: 95000; visibility: hidden; }
+  #stopPicker.open { visibility: visible; }
+  #stopPicker .picker-backdrop { position: absolute; inset: 0; background: rgba(10,18,35,0.45);
+    opacity: 0; transition: opacity 0.2s; }
+  #stopPicker.open .picker-backdrop { opacity: 1; }
+  #stopPicker .picker-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%; display: flex; flex-direction: column;
+    background: var(--bg); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(10,18,35,0.3);
+    transform: translateY(100%); transition: transform 0.25s ease-out;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #stopPicker.open .picker-sheet { transform: translateY(0); }
+  .picker-head { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1rem 0.6rem; }
+  .picker-title { font-size: 1.05rem; font-weight: 800; flex: 1; }
+  .picker-note { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-left: 0.4rem; }
+  .picker-x { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--border);
+    color: var(--text); cursor: pointer; font-size: 0.9rem; }
+  .picker-searchbar { display: flex; align-items: center; gap: 0.55rem; margin: 0 1rem 0.6rem;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem 0.85rem; color: var(--text-muted); }
+  .picker-searchbar input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.95rem; color: var(--text); outline: none; }
+  .picker-list { flex: 1; overflow-y: auto; padding: 0 0.75rem 1rem; -webkit-overflow-scrolling: touch; }
+  .m-pick { display: flex; align-items: center; width: 100%; padding: 0.85rem 0.9rem; margin-bottom: 0.4rem;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--card); font: inherit; cursor: pointer; }
+  .m-pick-nm { flex: 1; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text); }
+  .m-pick-mark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; background: #eef1f5; color: var(--text-muted); font-size: 0.8rem; }
+  .m-pick.on { border-color: var(--low); background: rgba(42,157,143,0.08); }
+  .m-pick.on .m-pick-mark { background: var(--low); color: #fff; }
+  .m-pick[disabled] { opacity: 0.45; cursor: default; }
 
   /* Per-card delete + "Remove?" confirmation */
   body.is-mobile .m-sc-del {
@@ -1481,6 +1562,21 @@
       <i class="fa-brands fa-google"></i> Sign in with your AHL account
     </button>
     <div class="gate-foot">Augmented Human Lab</div>
+  </div>
+</div>
+
+<!-- Stop picker (mobile) — searchable bottom sheet opened by the "Add a stop" button -->
+<div id="stopPicker" aria-hidden="true">
+  <div class="picker-backdrop" data-picker-close></div>
+  <div class="picker-sheet" role="dialog" aria-label="Add a stop">
+    <div class="picker-head">
+      <div class="picker-title">Add a stop <span id="pickerNote" class="picker-note"></span></div>
+      <button class="picker-x" data-picker-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="picker-searchbar"><i class="fa-solid fa-magnifying-glass"></i>
+      <input id="pickerSearch" type="text" placeholder="Search stops…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="picker-list" id="pickerList"></div>
   </div>
 </div>
 <script>
@@ -1858,6 +1954,7 @@ function switchView(v, skipHash) {
   if (v === 'map') setTimeout(renderMap, 50);
   if (v === 'diagnostics') renderDiagnostics();
   if (v === 'updates') ensureTickers();   // lazy-load the heavy alerts feed on demand
+  if (v === 'shuttle' && IS_MOBILE()) startGeo();
   renderAll();
 }
 window.addEventListener('hashchange', () => {
@@ -2085,15 +2182,226 @@ function mSkelBlock() {
     '<span class="skel" style="display:block;width:150px;height:9px;background:#d3dae4"></span></div></div>' +
     mSkelBusRow() + mSkelBusRow() + '</div>';
 }
-// Just the add-stop search box — current stops are shown as their own cards
-// below (each with its own delete button), so chips here would be redundant.
-function mAddStopHtml() {
-  const stops = getStops();
-  if (stops.length >= MAX_STOPS) {
-    return `<div class="m-addbar m-addbar-full">Showing ${MAX_STOPS} stops (max). Remove one to add another.</div>`;
+// "Add a stop" opens a searchable picker (see openStopPicker) instead of an
+// inline datalist — easier to browse + dedupe on a phone.
+function mAddBtnHtml() {
+  const full = getStops().length >= MAX_STOPS;
+  return full
+    ? `<div class="m-addbar m-addbar-full">Tracking ${MAX_STOPS} stops (max) — remove one to add another.</div>`
+    : `<button class="m-addbtn" data-open-picker><i class="fa-solid fa-plus"></i> Add a stop</button>`;
+}
+
+/* ===== Install (PWA) banner ===== */
+let deferredInstallPrompt = null;
+let installDismissed = (() => { try { return sessionStorage.getItem('isb-install-x') === '1'; } catch (e) { return false; } })();
+const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+const installIsIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent || '') && !window.MSStream;
+function shouldShowInstall() {
+  if (isStandalone() || installDismissed) return false;
+  return !!deferredInstallPrompt || installIsIOS();
+}
+function installCardHtml() {
+  if (!shouldShowInstall()) return '';
+  const x = `<button class="m-install-x" data-install-dismiss aria-label="Dismiss"><i class="fa-solid fa-xmark"></i></button>`;
+  if (installIsIOS()) {
+    return `<div class="m-install"><div class="m-install-ic"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
+      <div class="m-install-tx"><b>Install NUS ISB</b><span>Tap <i class="fa-solid fa-arrow-up-from-bracket"></i> Share, then “Add to Home Screen”.</span></div>${x}</div>`;
   }
-  return `<div class="m-addbar"><i class="fa-solid fa-magnifying-glass"></i>` +
-    `<input class="m-chip-input" list="stopList" placeholder="Add a stop…" autocomplete="off" spellcheck="false"></div>`;
+  return `<div class="m-install"><div class="m-install-ic"><i class="fa-solid fa-bus"></i></div>
+    <div class="m-install-tx"><b>Install as an app</b><span>Add NUS ISB to your home screen for faster access.</span></div>
+    <button class="m-install-btn" data-install>Install App</button>${x}</div>`;
+}
+async function doInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  try { await deferredInstallPrompt.userChoice; } catch (e) {}
+  deferredInstallPrompt = null;
+  if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
+});
+
+/* ===== Nearest stop (geolocation + compass) ===== */
+let geoNearest = null;      // { stop, dist (m), bearing (deg from north) }
+let geoHeading = null;      // device compass heading (deg) or null
+let geoState = 'idle';      // idle | on | denied | unsupported
+let geoWatchId = null;
+const TO_RAD = Math.PI / 180, TO_DEG = 180 / Math.PI;
+function haversine(aLat, aLng, bLat, bLng) {
+  const dLat = (bLat - aLat) * TO_RAD, dLng = (bLng - aLng) * TO_RAD;
+  const la1 = aLat * TO_RAD, la2 = bLat * TO_RAD;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(x));
+}
+function bearingTo(aLat, aLng, bLat, bLng) {
+  const dLng = (bLng - aLng) * TO_RAD, la1 = aLat * TO_RAD, la2 = bLat * TO_RAD;
+  const y = Math.sin(dLng) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * TO_DEG + 360) % 360;
+}
+function computeNearest(lat, lng) {
+  const coords = lastStopCoords || {};
+  let best = null;
+  for (const [stop, c] of Object.entries(coords)) {
+    if (!c || typeof c.lat !== 'number' || typeof c.lng !== 'number') continue;
+    const d = haversine(lat, lng, c.lat, c.lng);
+    if (!best || d < best.dist) best = { stop, dist: d, bearing: bearingTo(lat, lng, c.lat, c.lng) };
+  }
+  return best;
+}
+function startGeo() {
+  if (geoState === 'on' || geoWatchId != null) return;
+  if (!('geolocation' in navigator)) { geoState = 'unsupported'; return; }
+  geoWatchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      geoState = 'on';
+      const n = computeNearest(pos.coords.latitude, pos.coords.longitude);
+      if (!n) return;
+      const changed = !geoNearest || geoNearest.stop !== n.stop;
+      geoNearest = n;
+      if (changed && IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
+      else updateNearestLive();
+    },
+    (err) => {
+      geoState = err && err.code === 1 ? 'denied' : 'idle';
+      if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile();
+    },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+  );
+  startOrientation();
+}
+let orientStarted = false;
+function startOrientation() {
+  if (orientStarted) return;
+  const handler = (e) => {
+    let h = null;
+    if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;          // iOS
+    else if (e.absolute && typeof e.alpha === 'number') h = (360 - e.alpha) % 360;        // others
+    if (h != null) { geoHeading = h; updateNearestArrow(); }
+  };
+  // iOS 13+ needs permission via a user gesture; that's requested from the compass tap.
+  if (!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function')) {
+    window.addEventListener('deviceorientationabsolute', handler, true);
+    window.addEventListener('deviceorientation', handler, true);
+    orientStarted = true;
+  } else {
+    window.__isbOrientHandler = handler; // attached after permission (enableCompass)
+  }
+}
+async function enableCompass() {
+  try {
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const res = await DeviceOrientationEvent.requestPermission();
+      if (res === 'granted' && window.__isbOrientHandler && !orientStarted) {
+        window.addEventListener('deviceorientation', window.__isbOrientHandler, true);
+        orientStarted = true;
+      }
+    }
+  } catch (e) {}
+}
+function nearestCardHtml() {
+  if (!IS_MOBILE()) return '';
+  if (!geoNearest) {
+    if (geoState === 'denied') return `<button class="m-near m-near-off" data-geo-enable><i class="fa-solid fa-location-dot"></i> Enable location for your nearest stop</button>`;
+    return '';
+  }
+  const n = geoNearest;
+  const tracked = getStops().includes(n.stop);
+  return `<div class="m-near" data-near-stop="${escapeHtml(n.stop)}">
+    <button class="m-near-compass" data-compass aria-label="Point to ${escapeHtml(n.stop)}"><i class="fa-solid fa-arrow-up" id="nearArrow"></i></button>
+    <div class="m-near-info"><div class="m-near-label">Nearest stop</div><div class="m-near-name">${escapeHtml(n.stop)}</div></div>
+    <div class="m-near-dist"><span id="nearDist">–</span><small>m</small></div>
+    ${tracked
+      ? '<span class="m-near-tag"><i class="fa-solid fa-check"></i></span>'
+      : `<button class="m-near-add" data-near-add="${escapeHtml(n.stop)}">Track</button>`}
+  </div>`;
+}
+function animateNumber(el, to) {
+  const cur = parseInt(el.textContent, 10);
+  const from = isNaN(cur) ? to : cur;
+  if (from === to) { el.textContent = String(to); return; }
+  cancelAnimationFrame(el._raf || 0);
+  const t0 = performance.now(), dur = 600;
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;   // easeInOutQuad
+    el.textContent = String(Math.round(from + (to - from) * e));
+    if (p < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+function updateNearestArrow() {
+  const a = document.getElementById('nearArrow');
+  if (!a || !geoNearest) return;
+  const rot = (geoNearest.bearing - (geoHeading || 0) + 360) % 360;
+  a.style.transform = 'rotate(' + rot.toFixed(0) + 'deg)';
+  const c = a.closest('.m-near-compass');
+  if (c) c.classList.toggle('m-compass-live', geoHeading != null);
+}
+function updateNearestLive() {
+  if (!geoNearest) return;
+  const el = document.getElementById('nearDist');
+  if (el) animateNumber(el, Math.round(geoNearest.dist));
+  updateNearestArrow();
+}
+
+/* ===== Stop picker (searchable bottom sheet) ===== */
+function allStopNames() {
+  return Array.from(document.querySelectorAll('#stopList option'))
+    .map((o) => (o.value || '').trim().toUpperCase()).filter(Boolean).sort();
+}
+function renderPickerList(filter) {
+  const list = document.getElementById('pickerList');
+  if (!list) return;
+  const sel = new Set(getStops());
+  const full = sel.size >= MAX_STOPS;
+  const q = (filter || '').trim().toUpperCase();
+  const items = allStopNames().filter((s) => !q || s.includes(q));
+  list.innerHTML = items.length ? items.map((s) => {
+    const on = sel.has(s);
+    const disabled = full && !on;
+    return `<button class="m-pick ${on ? 'on' : ''}" data-pick="${escapeHtml(s)}" ${disabled ? 'disabled' : ''}>
+      <span class="m-pick-nm">${escapeHtml(s)}${TERMINAL_STOPS.has(s) ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.7em;color:var(--text-muted)"></i>' : ''}</span>
+      <span class="m-pick-mark">${on ? '<i class="fa-solid fa-check"></i>' : (disabled ? '' : '<i class="fa-solid fa-plus"></i>')}</span>
+    </button>`;
+  }).join('') : '<div class="empty" style="padding:1.5rem;">No stops match.</div>';
+  const note = document.getElementById('pickerNote');
+  if (note) note.textContent = `${sel.size}/${MAX_STOPS} selected`;
+}
+function openStopPicker() {
+  const p = document.getElementById('stopPicker');
+  if (!p) return;
+  const input = document.getElementById('pickerSearch');
+  if (input) input.value = '';
+  renderPickerList('');
+  p.classList.add('open');
+  document.body.classList.add('picker-open');
+  setTimeout(() => { if (input) input.focus(); }, 50);
+}
+function closeStopPicker() {
+  const p = document.getElementById('stopPicker');
+  if (p) p.classList.remove('open');
+  document.body.classList.remove('picker-open');
+}
+function pickerToggle(stop) {
+  const sel = getStops();
+  if (sel.includes(stop)) {
+    setStops(sel.filter((x) => x !== stop));
+  } else {
+    if (sel.length >= MAX_STOPS) return;
+    setStops([...sel, stop]);
+  }
+  renderStopChips();
+  renderPickerList(document.getElementById('pickerSearch')?.value || '');
+  renderShuttles();
+  refresh();
 }
 
 // Per-card delete confirmation. Only one card can be in "Remove?" state at a time;
@@ -2164,7 +2472,8 @@ function mStopCardHtml(stopName) {
   const data = lastShuttles[stopName];
   const fetched = shuttleFetchedAt[stopName] || Date.now();
   if (!data) {
-    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head">${nm}${del}</div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
+    // While loading: no delete button (it's only shown once details are in).
+    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head">${nm}</div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
   }
   const r = data.ShuttleServiceResult || {};
   const shuttles = consolidateShuttles(r.shuttles || []);
@@ -2180,9 +2489,14 @@ function mStopCardHtml(stopName) {
 function renderShuttlesMobile() {
   const board = document.getElementById('depBoard');
   const stops = getStops();
-  board.innerHTML = mAddStopHtml() + (stops.length
-    ? stops.map(mStopCardHtml).join('')
-    : '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>');
+  board.innerHTML =
+    installCardHtml() +
+    nearestCardHtml() +
+    mAddBtnHtml() +
+    (stops.length
+      ? stops.map(mStopCardHtml).join('')
+      : '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>');
+  updateNearestLive();
 }
 function renderBusesMobile() {
   const c = document.getElementById('routeLines');
@@ -2814,19 +3128,31 @@ depBoardEl.addEventListener('click', (e) => {
   if (yes) { confirmRemove(yes.dataset.confirmYes); return; }
   const no = e.target.closest('[data-confirm-no]');
   if (no) { cancelRemoveConfirm(no.dataset.confirmNo); return; }
+  if (e.target.closest('[data-open-picker]')) { openStopPicker(); return; }
+  if (e.target.closest('[data-install]')) { doInstall(); return; }
+  if (e.target.closest('[data-install-dismiss]')) {
+    installDismissed = true;
+    try { sessionStorage.setItem('isb-install-x', '1'); } catch (err) {}
+    renderShuttlesMobile(); return;
+  }
+  const nearAdd = e.target.closest('[data-near-add]');
+  if (nearAdd) { tryAddStop(nearAdd.dataset.nearAdd); return; }
+  if (e.target.closest('[data-geo-enable]')) { geoState = 'idle'; startGeo(); return; }
+  if (e.target.closest('[data-compass]')) { enableCompass(); return; }
 });
-depBoardEl.addEventListener('keydown', (e) => {
-  const input = e.target.closest('.m-chip-input');
-  if (!input || e.key !== 'Enter') return;
-  e.preventDefault();
-  tryAddStop(input.value.trim().toUpperCase(), input);
-});
-depBoardEl.addEventListener('input', (e) => {
-  const input = e.target.closest('.m-chip-input');
-  if (!input) return;
-  const v = input.value.trim().toUpperCase();
-  if (KNOWN_STOPS.has(v)) tryAddStop(v, input);
-});
+
+// Stop picker: search filter, item toggle, close.
+(() => {
+  const picker = document.getElementById('stopPicker');
+  if (!picker) return;
+  document.getElementById('pickerSearch')?.addEventListener('input', (e) => renderPickerList(e.target.value));
+  document.getElementById('pickerList')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pick]');
+    if (b && !b.disabled) pickerToggle(b.dataset.pick);
+  });
+  picker.addEventListener('click', (e) => { if (e.target.closest('[data-picker-close]')) closeStopPicker(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStopPicker(); });
+})();
 
 // Left/Right arrow keys cycle through views (skip when typing in a form field).
 const VIEW_ORDER = ['shuttle', 'buses', 'map', 'updates', 'diagnostics'];
@@ -2857,6 +3183,7 @@ function startApp() {
   loadConfig();
   refresh();                 // bootstrap (prod) now includes StopRoutes
   loadStopCoords();
+  if (IS_MOBILE()) startGeo();   // nearest-stop compass (asks for location permission)
   loadRouteGeometry();
   loadMapMeta();
   setInterval(refresh, REFRESH_INTERVAL_MS);
