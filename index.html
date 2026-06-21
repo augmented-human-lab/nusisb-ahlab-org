@@ -307,7 +307,7 @@
   .diag-banner.st-fail { background: rgba(239,68,68,0.12);  color: #dc2626; border-color: rgba(239,68,68,0.35); }
   .diag-meta { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: 0.8rem; color: var(--text-muted); margin-left: auto; font-weight: 400; }
   .diag-meta code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
-  .st-dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; }
+  .st-dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; margin-right: 0.45rem; }
   .st-dot.st-ok   { background: #22c55e; }
   .st-dot.st-auth { background: #f59e0b; }
   .st-dot.st-fail { background: #ef4444; }
@@ -322,8 +322,17 @@
   .diag-badge.st-auth { background: rgba(245,158,11,0.15); color: #d97706; }
   .diag-badge.st-fail { background: rgba(239,68,68,0.15);  color: #dc2626; }
   .diag-badge.st-muted{ background: var(--border); color: var(--text-muted); }
+  .diag-table code + .diag-badge { margin-left: 0.45rem; }   /* space: NUS [public] */
   .diag-detail { color: #dc2626; font-size: 0.75rem; margin-top: 0.2rem; }
-  .diag-refresh { margin-left: auto; }
+  /* Modern "Recheck" pill (overrides the inherited .diag-badge.st-muted look) */
+  .diag-refresh {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;
+    background: var(--primary); color: #fff; border: 0; border-radius: 999px;
+    padding: 0.45rem 0.9rem; font: inherit; font-size: 0.78rem; font-weight: 600; line-height: 1;
+    box-shadow: 0 2px 8px rgba(0,61,124,0.22); transition: filter 0.15s, transform 0.06s;
+  }
+  .diag-refresh:hover { filter: brightness(1.08); }
+  .diag-refresh:active { transform: translateY(1px); }
   .diag-card-head { display: flex; align-items: center; gap: 0.5rem; }
 
   /* Mobile layout lives in the "MOBILE LAYOUT" block near the end of this <style>. */
@@ -1361,22 +1370,36 @@
   body.is-mobile .tabs .tab:hover, body.is-mobile .tabs .tab:active { background: none; transform: none; }
   body.is-mobile .tabs .tab.active { background: none; color: var(--primary); font-weight: 700; }
 
-  /* Stop chips (Shuttle) */
+  /* Add-stop bar (Shuttle/Stops) */
   body.is-mobile #depBoard { display: block; padding: 0.85rem 0.8rem 0; height: auto; }
-  body.is-mobile .m-chips { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.85rem; scrollbar-width: none; }
-  body.is-mobile .m-chips::-webkit-scrollbar { display: none; }
-  body.is-mobile .m-chip {
-    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.4rem;
-    background: var(--primary); color: #fff; border-radius: 999px;
-    padding: 0.4rem 0.5rem 0.4rem 0.8rem; font-size: 0.82rem; font-weight: 600;
+  body.is-mobile .m-addbar {
+    display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.85rem;
+    background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+    padding: 0.55rem 0.95rem; color: var(--text-muted); box-shadow: var(--shadow);
   }
-  body.is-mobile .m-chip button { background: rgba(255,255,255,0.22); border: 0; color: #fff; cursor: pointer;
-    width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; }
+  body.is-mobile .m-addbar:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,61,124,0.12); }
   body.is-mobile .m-chip-input {
-    flex: 0 0 auto; min-width: 8.5rem; border: 1px dashed var(--border); background: var(--card);
-    border-radius: 999px; padding: 0.4rem 0.9rem; font: inherit; font-size: 0.82rem; color: var(--text);
+    flex: 1; min-width: 0; border: 0; background: transparent; padding: 0;
+    font: inherit; font-size: 0.92rem; color: var(--text);
   }
-  body.is-mobile .m-chip-input:focus { outline: none; border-color: var(--primary); border-style: solid; }
+  body.is-mobile .m-chip-input:focus { outline: none; }
+  body.is-mobile .m-addbar-full { justify-content: center; font-size: 0.82rem; }
+
+  /* Per-card delete + "Remove?" confirmation */
+  body.is-mobile .m-sc-del {
+    flex: 0 0 auto; margin-left: 0.6rem; width: 30px; height: 30px; border: 0; border-radius: 9px;
+    background: rgba(217,70,82,0.10); color: var(--high); cursor: pointer; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  body.is-mobile .m-sc-del:active { background: rgba(217,70,82,0.20); }
+  body.is-mobile .m-confirm { animation: mCardIn 0.18s ease; }
+  body.is-mobile .m-confirm-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 0.95rem; }
+  body.is-mobile .m-confirm-q { flex: 1; font-size: 0.9rem; font-weight: 600; }
+  body.is-mobile .m-cf { border: 0; border-radius: 999px; padding: 0.45rem 1.1rem; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+  body.is-mobile .m-cf-no { background: #eef1f5; color: var(--text); }
+  body.is-mobile .m-cf-yes { background: var(--high); color: #fff; }
+  body.is-mobile .m-cf-yes:active, body.is-mobile .m-cf-no:active { transform: translateY(1px); }
+  @keyframes mCardIn { from { opacity: 0.3; transform: scale(0.985); } to { opacity: 1; transform: none; } }
 
   /* Departure stop cards */
   body.is-mobile .m-stopcard { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 0.85rem; overflow: hidden; }
@@ -1439,6 +1462,10 @@
   body.is-mobile .diag-table tr:first-child { border-top: 0; }
   body.is-mobile .diag-table td { display: inline-flex; align-items: center; padding: 0; border: 0; }
   body.is-mobile .diag-table td:first-child { flex: 1 0 100%; font-weight: 600; font-size: 0.86rem; }
+  /* Long values (API base, upstream URL) must wrap, not overflow the screen */
+  body.is-mobile #diagnosticsView code { word-break: break-all; white-space: normal; }
+  body.is-mobile #diagnosticsView .diag-meta { flex-direction: column; align-items: flex-start; gap: 0.35rem; margin-left: 0; }
+  body.is-mobile #diagnosticsView .diag-banner { flex-wrap: wrap; }
 </style>
 </head>
 <body data-mode="unknown">
@@ -1475,7 +1502,7 @@
     <span class="m-live"><span class="d"></span> live</span>
     <div class="fetch-wedge" id="fetchWedge" title="Next refresh"></div>
     <nav class="tabs" id="tabs">
-      <button class="tab" data-view="shuttle"><i class="fa-solid fa-route"></i> Shuttle</button>
+      <button class="tab" data-view="shuttle"><i class="fa-solid fa-route"></i> Stops</button>
       <button class="tab" data-view="buses"><i class="fa-solid fa-bus"></i> Buses</button>
       <button class="tab" data-view="map"><i class="fa-solid fa-map-location-dot"></i> Map</button>
       <button class="tab" data-view="updates"><i class="fa-solid fa-bell"></i> Updates</button>
@@ -1526,14 +1553,16 @@
 
   <div class="view" id="updatesView">
     <div class="view-scroll">
-      <section class="card">
+      <!-- Cards are hidden until their renderer confirms there's active content. -->
+      <section class="card" id="alertsCard" style="display:none">
         <div class="card-header"><i class="fa-solid fa-triangle-exclamation"></i> Service Alerts</div>
-        <div class="card-body" id="tickers"><div class="empty">Loading…</div></div>
+        <div class="card-body" id="tickers"></div>
       </section>
-      <section class="card">
+      <section class="card" id="announcementsCard" style="display:none">
         <div class="card-header"><i class="fa-solid fa-bullhorn"></i> Announcements</div>
-        <div class="card-body" id="announcements"><div class="empty">Loading…</div></div>
+        <div class="card-body" id="announcements"></div>
       </section>
+      <div class="empty" id="updatesEmpty" style="display:none; padding:2rem 1rem;">Nothing to report right now.</div>
     </div>
   </div>
 
@@ -2056,14 +2085,43 @@ function mSkelBlock() {
     '<span class="skel" style="display:block;width:150px;height:9px;background:#d3dae4"></span></div></div>' +
     mSkelBusRow() + mSkelBusRow() + '</div>';
 }
-function mStopChipsHtml(stops) {
-  const atMax = stops.length >= MAX_STOPS;
-  return `<div class="m-chips">` +
-    stops.map((s) =>
-      `<span class="m-chip">${escapeHtml(s)}<button data-remove="${escapeHtml(s)}" aria-label="Remove ${escapeHtml(s)}"><i class="fa-solid fa-xmark"></i></button></span>`
-    ).join('') +
-    (atMax ? '' : `<input class="m-chip-input" list="stopList" placeholder="+ Add stop" autocomplete="off" spellcheck="false">`) +
-    `</div>`;
+// Just the add-stop search box — current stops are shown as their own cards
+// below (each with its own delete button), so chips here would be redundant.
+function mAddStopHtml() {
+  const stops = getStops();
+  if (stops.length >= MAX_STOPS) {
+    return `<div class="m-addbar m-addbar-full">Showing ${MAX_STOPS} stops (max). Remove one to add another.</div>`;
+  }
+  return `<div class="m-addbar"><i class="fa-solid fa-magnifying-glass"></i>` +
+    `<input class="m-chip-input" list="stopList" placeholder="Add a stop…" autocomplete="off" spellcheck="false"></div>`;
+}
+
+// Per-card delete confirmation. Only one card can be in "Remove?" state at a time;
+// it auto-reverts after 5s of no choice. State lives in JS (not the DOM) so the
+// 30s data refresh re-render preserves it.
+let pendingRemove = null, pendingRemoveTimer = null;
+function revertRemoveConfirm(stop) {                 // re-expand the card with a soft animation
+  pendingRemove = null;
+  renderShuttlesMobile();
+  const card = document.querySelector('.m-stopcard[data-stop="' + (window.CSS && CSS.escape ? CSS.escape(stop) : stop) + '"]');
+  if (card) { card.classList.add('m-confirm'); void card.offsetWidth; }  // reuse the mCardIn keyframe
+}
+function startRemoveConfirm(stop) {
+  clearTimeout(pendingRemoveTimer);
+  pendingRemove = stop;
+  renderShuttlesMobile();
+  pendingRemoveTimer = setTimeout(() => { pendingRemoveTimer = null; revertRemoveConfirm(stop); }, 5000);
+}
+function cancelRemoveConfirm(stop) {
+  clearTimeout(pendingRemoveTimer); pendingRemoveTimer = null;
+  revertRemoveConfirm(stop);
+}
+function confirmRemove(stop) {
+  clearTimeout(pendingRemoveTimer); pendingRemoveTimer = null; pendingRemove = null;
+  setStops(getStops().filter((x) => x !== stop));
+  renderStopChips();
+  renderShuttles();
+  refresh();
 }
 function mDepRow(s, fetched) {
   const route = s.name || '?';
@@ -2088,12 +2146,25 @@ function mDepRow(s, fetched) {
     </div></div>`;
 }
 function mStopCardHtml(stopName) {
-  const data = lastShuttles[stopName];
-  const fetched = shuttleFetchedAt[stopName] || Date.now();
   const term = TERMINAL_STOPS.has(stopName)
     ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.65em;color:var(--text-muted)"></i>' : '';
+  const nm = `<div class="m-sc-nm">${escapeHtml(stopName)}${term}</div>`;
+  const del = `<button class="m-sc-del" data-remove-card="${escapeHtml(stopName)}" aria-label="Remove ${escapeHtml(stopName)}"><i class="fa-solid fa-trash-can"></i></button>`;
+
+  // "Remove?" confirmation — collapsed to the title row + Yes/No (auto-reverts after 5s).
+  if (pendingRemove === stopName) {
+    return `<div class="m-stopcard m-confirm" data-stop="${escapeHtml(stopName)}">
+      <div class="m-sc-head">${nm}</div>
+      <div class="m-confirm-row"><span class="m-confirm-q">Remove this stop?</span>
+        <button class="m-cf m-cf-no" data-confirm-no="${escapeHtml(stopName)}">No</button>
+        <button class="m-cf m-cf-yes" data-confirm-yes="${escapeHtml(stopName)}">Yes</button></div>
+    </div>`;
+  }
+
+  const data = lastShuttles[stopName];
+  const fetched = shuttleFetchedAt[stopName] || Date.now();
   if (!data) {
-    return `<div class="m-stopcard"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div></div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
+    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head">${nm}${del}</div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
   }
   const r = data.ShuttleServiceResult || {};
   const shuttles = consolidateShuttles(r.shuttles || []);
@@ -2102,15 +2173,14 @@ function mStopCardHtml(stopName) {
   const rows = shuttles.length
     ? shuttles.map((s) => mDepRow(s, fetched)).join('')
     : '<div class="empty" style="padding:1rem 0.95rem;">No services running here right now.</div>';
-  return `<div class="m-stopcard">
-    <div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${term}</div><div class="m-sc-sub">${shuttles.length} service${shuttles.length === 1 ? '' : 's'}</div></div>
+  return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}">
+    <div class="m-sc-head">${nm}<div class="m-sc-sub">${shuttles.length} service${shuttles.length === 1 ? '' : 's'}</div>${del}</div>
     ${rows}</div>`;
 }
 function renderShuttlesMobile() {
   const board = document.getElementById('depBoard');
   const stops = getStops();
-  const chips = mStopChipsHtml(stops);
-  board.innerHTML = chips + (stops.length
+  board.innerHTML = mAddStopHtml() + (stops.length
     ? stops.map(mStopCardHtml).join('')
     : '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>');
 }
@@ -2193,8 +2263,20 @@ function renderStopChips() {
 }
 
 /* ==== render: tickers (alerts) ==== */
+// Show the Updates "nothing to report" line only when both cards are hidden
+// (and announcements have loaded, so we don't flash it during bootstrap).
+function refreshUpdatesEmpty() {
+  const a = document.getElementById('alertsCard');
+  const n = document.getElementById('announcementsCard');
+  const empty = document.getElementById('updatesEmpty');
+  if (!empty) return;
+  const anyVisible = (a && a.style.display !== 'none') || (n && n.style.display !== 'none');
+  empty.style.display = (!anyVisible && lastAnnouncements) ? 'block' : 'none';
+}
 function renderTickers() {
-  if (!lastTickers) return;
+  const card = document.getElementById('alertsCard');
+  const hide = () => { if (card) card.style.display = 'none'; refreshUpdatesEmpty(); };
+  if (!lastTickers) return hide();
   const list = (lastTickers.TickerTapesResult && lastTickers.TickerTapesResult.TickerTape) || [];
   const now = new Date();
   const active = list.filter(t =>
@@ -2203,7 +2285,8 @@ function renderTickers() {
     (!t.Display_To || new Date(t.Display_To) >= now)
   );
   const el = document.getElementById('tickers');
-  if (!active.length) { el.innerHTML = '<div class="empty">No active alerts.</div>'; return; }
+  if (!active.length) return hide();
+  if (card) card.style.display = '';
   const order = { high: 0, medium: 1, low: 2 };
   active.sort((a, b) => order[priorityClass(a.Priority)] - order[priorityClass(b.Priority)]);
   el.innerHTML = `<div class="ticker-list">${active.map(t => {
@@ -2219,6 +2302,7 @@ function renderTickers() {
         </div>
       </div>`;
   }).join('')}</div>`;
+  refreshUpdatesEmpty();
 }
 
 /* (Routes Directory view removed — its info is now visible directly in the Buses view's stop columns.) */
@@ -2440,11 +2524,14 @@ function renderBuses() {
 
 /* ==== render: announcements ==== */
 function renderAnnouncements() {
-  if (!lastAnnouncements) return;
+  const card = document.getElementById('announcementsCard');
+  const hide = () => { if (card) card.style.display = 'none'; refreshUpdatesEmpty(); };
+  if (!lastAnnouncements) return hide();
   const list = ((lastAnnouncements.AnnouncementsResult && lastAnnouncements.AnnouncementsResult.Announcement) || [])
     .filter(a => a.Status === 'Enabled');
   const el = document.getElementById('announcements');
-  if (!list.length) { el.innerHTML = '<div class="empty">No announcements.</div>'; return; }
+  if (!list.length) return hide();
+  if (card) card.style.display = '';
   el.innerHTML = list.map(a => `
     <div class="announcement">
       <div>${a.Text}</div>
@@ -2452,6 +2539,7 @@ function renderAnnouncements() {
         <i class="fa-regular fa-calendar"></i> ${escapeHtml(fmtRelative(a.Created_On))}
       </div>
     </div>`).join('');
+  refreshUpdatesEmpty();
 }
 
 /* ==== central render trigger ==== */
@@ -2593,7 +2681,7 @@ async function renderDiagnostics() {
     h = await loadJSON(apiUrl('/api/health'));
   } catch (e) {
     el.innerHTML = `<div class="diag-banner st-fail"><span class="st-dot st-fail"></span> Backend unreachable — ${escapeHtml(e.message)}
-      <button class="diag-badge st-muted diag-refresh" id="diagRefreshBtn"><i class="fa-solid fa-arrows-rotate"></i> Retry</button></div>`;
+      <button class="diag-refresh" id="diagRefreshBtn"><i class="fa-solid fa-arrows-rotate"></i> Retry</button></div>`;
     document.getElementById('diagRefreshBtn')?.addEventListener('click', renderDiagnostics);
     diagLoading = false;
     return;
@@ -2635,7 +2723,7 @@ async function renderDiagnostics() {
   el.innerHTML = `
     <div class="diag-banner st-${overall}">
       <span class="st-dot st-${overall}"></span> ${escapeHtml(overallText)}
-      <button class="diag-badge st-muted diag-refresh" id="diagRefreshBtn" title="Re-run health check"><i class="fa-solid fa-arrows-rotate"></i> Recheck</button>
+      <button class="diag-refresh" id="diagRefreshBtn" title="Re-run health check"><i class="fa-solid fa-arrows-rotate"></i> Recheck</button>
     </div>
     <div class="diag-meta" style="margin:0 0 1rem 0;">
       <span>API base: <code>${escapeHtml(API_BASE || '(same origin)')}</code></span>
@@ -2720,12 +2808,12 @@ document.getElementById('tabs').addEventListener('click', (e) => {
 // chip handlers (remove on ✕, add on Enter or datalist selection).
 const depBoardEl = document.getElementById('depBoard');
 depBoardEl.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-remove]');
-  if (!btn) return;
-  setStops(getStops().filter((x) => x !== btn.dataset.remove));
-  renderStopChips();
-  renderShuttles();
-  refresh();
+  const del = e.target.closest('[data-remove-card]');
+  if (del) { startRemoveConfirm(del.dataset.removeCard); return; }
+  const yes = e.target.closest('[data-confirm-yes]');
+  if (yes) { confirmRemove(yes.dataset.confirmYes); return; }
+  const no = e.target.closest('[data-confirm-no]');
+  if (no) { cancelRemoveConfirm(no.dataset.confirmNo); return; }
 });
 depBoardEl.addEventListener('keydown', (e) => {
   const input = e.target.closest('.m-chip-input');
