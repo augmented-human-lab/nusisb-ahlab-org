@@ -1082,22 +1082,29 @@
   .stop-add-btn:hover { background: rgba(0,61,124,0.12); }
   .stop-add-full { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.4rem; }
 
-  /* Desktop "open on your phone" QR card — hidden on phones (mobile IS the phone). */
-  .desktop-qr { display: none; }
-  body:not(.is-mobile) .desktop-qr {
-    flex: 0 0 auto; display: flex; align-items: center; gap: 1.25rem;
-    margin: 1rem 1rem 0; padding: 1rem 1.25rem;
-    background: linear-gradient(135deg, var(--primary), #00509e); color: #fff;
-    border-radius: 16px; box-shadow: var(--shadow);
+  /* Sub-headers inside a terminal column ("Departures" / "Arrivals"). */
+  .dep-group-label {
+    font-size: calc(0.72rem * var(--fit, 1)); font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted); padding: 0.1rem 0.2rem 0;
+    display: flex; align-items: center; gap: 0.4rem;
   }
-  .desktop-qr-code { flex: 0 0 auto; width: 132px; height: 132px; background: #fff;
-    border-radius: 10px; padding: 8px; display: flex; align-items: center; justify-content: center; }
-  .desktop-qr-code img, .desktop-qr-code canvas { display: block; width: 116px !important; height: 116px !important; }
-  .desktop-qr-link { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; text-align: center; padding: 0 6px; }
-  .desktop-qr-tx { min-width: 0; }
-  .desktop-qr-t { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem; }
-  .desktop-qr-t i { color: var(--accent); }
-  .desktop-qr-s { font-size: 0.9rem; opacity: 0.92; margin-top: 0.35rem; line-height: 1.45; max-width: 44ch; }
+  .dep-group-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .dep-group-label.arr { color: var(--primary); }
+
+  /* "Best on your phone" QR — a same-size card packed into the shortest column.
+     Two-class selector so it beats the later .dep-card base rule. */
+  .dep-card.dep-qr-card {
+    background: linear-gradient(135deg, var(--primary), #00509e); color: #fff; border-color: transparent;
+  }
+  .dep-qr-card .dep-qr-code { flex: 0 0 auto; width: calc(88px * var(--fit, 1)); height: calc(88px * var(--fit, 1));
+    background: #fff; border-radius: 10px; padding: 6px; display: flex; align-items: center; justify-content: center; }
+  .dep-qr-card .dep-qr-code img, .dep-qr-card .dep-qr-code canvas {
+    display: block; width: calc(76px * var(--fit, 1)) !important; height: calc(76px * var(--fit, 1)) !important; }
+  .dep-qr-card .dep-qr-link { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.72rem; text-align: center; }
+  .dep-qr-card .dep-qr-tx { flex: 1 1 auto; min-width: 0; }
+  .dep-qr-card .dep-qr-t { font-size: calc(1rem * var(--fit, 1)); font-weight: 800; display: flex; align-items: center; gap: 0.4rem; }
+  .dep-qr-card .dep-qr-t i { color: var(--accent); }
+  .dep-qr-card .dep-qr-s { font-size: calc(0.78rem * var(--fit, 1)); opacity: 0.92; margin-top: 0.3rem; line-height: 1.4; }
 
   .dep-board {
     flex: 1;
@@ -1670,7 +1677,6 @@
 
 <main>
   <div class="view" id="shuttleView">
-    <div class="desktop-qr" id="desktopQr"></div>
     <div class="dep-board" id="depBoard"><div class="empty">Loading…</div></div>
   </div>
 
@@ -2156,85 +2162,78 @@ function depCardHtml(shuttle, fetchedAt, kind) {
   </div>`;
 }
 
-// One departure-board column (a titled stack of route cards).
-function depColHtml(title, meta, termIcon, cards, fetched) {
-  const head = `<div class="dep-stop-head">
-    <div class="dep-stop-name">${termIcon}${escapeHtml(title)}</div>
-    <div class="dep-stop-meta">${escapeHtml(meta)}</div>
+// The "Best on your phone" QR card — a same-size .dep-card packed into the
+// shortest column so every column ends up a similar height.
+function depQrCardHtml() {
+  return `<div class="dep-card dep-qr-card">
+    <div class="dep-qr-code" id="depQrCode"></div>
+    <div class="dep-qr-tx">
+      <div class="dep-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Best on your phone</div>
+      <div class="dep-qr-s">Scan to open the live tracker on your mobile.</div>
+    </div>
   </div>`;
-  const body = cards.length
-    ? cards.map((c) => depCardHtml(c.shuttle, fetched, c.kind)).join('')
-    : '<div class="empty">No services running at this stop right now.</div>';
-  const FIT_THRESHOLD = 6;
-  const fit = cards.length > FIT_THRESHOLD ? Math.max(0.55, FIT_THRESHOLD / cards.length) : 1;
-  return `<div class="dep-stop" style="--fit: ${fit.toFixed(3)};">${head}${body}</div>`;
 }
-
-// Returns an ARRAY of column-HTML strings: one column for a normal stop, or two
-// ("<Stop> Departure" / "<Stop> Arrival") for a terminal that has both streams.
-function depStopHtml(stopName) {
-  const data = lastShuttles[stopName];
-  const fetched = shuttleFetchedAt[stopName] || Date.now();
-  const termIcon = TERMINAL_STOPS.has(stopName)
-    ? '<i class="fa-solid fa-flag-checkered terminal-stop-icon" title="Bus terminal"></i>'
-    : '';
-  if (!data) {
-    return [`<div class="dep-stop">
-      <div class="dep-stop-head">
-        <div class="dep-stop-name">${termIcon}${escapeHtml(stopName)}</div>
-        <div class="dep-stop-meta">Loading…</div>
-      </div>
-    </div>`];
-  }
-  const rawShuttles = (data.ShuttleServiceResult || {}).shuttles || [];
-  const split = terminalSplit(stopName, rawShuttles);
-  const svcMeta = (n) => `${n} service${n === 1 ? '' : 's'}`;
-  if (split) {
-    const depCards = split.departures.map((s) => ({ shuttle: s, kind: 'departure' }));
-    const arrCards = split.arrivals.map((s) => ({ shuttle: s, kind: 'arrival' }));
-    const cols = [depColHtml(stopName + ' Departure', svcMeta(depCards.length), termIcon, depCards, fetched)];
-    if (arrCards.length) {
-      cols.push(depColHtml(stopName + ' Arrival', svcMeta(arrCards.length), termIcon, arrCards, fetched));
-    }
-    return cols;
-  }
-  const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
-  const cards = shuttles.map((s) => ({ shuttle: s, kind: 'departure' }));
-  return [depColHtml(stopName, svcMeta(shuttles.length), termIcon, cards, fetched)];
-}
-
-// Desktop-only card nudging the user onto their phone. The QR encodes the live
-// URL (with the current ?stops=…) and is generated entirely in the browser.
-let desktopQrUrl = '', desktopQrRetry = false;
-function renderDesktopQr() {
-  const el = document.getElementById('desktopQr');
-  if (!el) return;
-  if (IS_MOBILE()) { el.style.display = 'none'; return; }
-  if (!el.dataset.built) {
-    el.innerHTML = `<div class="desktop-qr-code"></div>
-      <div class="desktop-qr-tx">
-        <div class="desktop-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Best on your phone</div>
-        <div class="desktop-qr-s">Scan to open the live tracker on your mobile — arrivals, a nearest-stop compass and a pocket-sized map.</div>
-      </div>`;
-    el.dataset.built = '1';
-  }
-  el.style.display = 'flex';
+// Generate the QR into #depQrCode (regenerated each render since the board's
+// innerHTML is rebuilt). Encodes the live URL, including the current ?stops=….
+let depQrRetry = false;
+function renderDepQr() {
+  const host = document.getElementById('depQrCode');
+  if (!host) return;
   const url = location.origin + location.pathname + location.search;
-  if (url === desktopQrUrl) return;
-  const host = el.querySelector('.desktop-qr-code');
   host.innerHTML = '';
-  if (typeof QRCode === 'undefined') {                 // library not loaded yet — link fallback + retry
-    host.innerHTML = `<a class="desktop-qr-link" href="${escapeHtml(url)}">Open link</a>`;
-    if (!desktopQrRetry) { desktopQrRetry = true; window.addEventListener('load', renderDesktopQr, { once: true }); }
+  if (typeof QRCode === 'undefined') {                 // library not loaded yet — link fallback + one retry
+    host.innerHTML = `<a class="dep-qr-link" href="${escapeHtml(url)}">Open link</a>`;
+    if (!depQrRetry) { depQrRetry = true; window.addEventListener('load', () => { if (currentView === 'shuttle' && !IS_MOBILE()) renderShuttles(); }, { once: true }); }
     return;
   }
-  desktopQrUrl = url;
   new QRCode(host, { text: url, width: 132, height: 132, colorDark: '#003d7c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+}
+
+// Build a column descriptor for one stop: its Departure/Arrival groups + total
+// card count (terminals stack both groups in the same column).
+function buildStopColumn(stopName) {
+  const data = lastShuttles[stopName];
+  const fetched = shuttleFetchedAt[stopName] || Date.now();
+  const term = TERMINAL_STOPS.has(stopName);
+  if (!data) return { stopName, term, fetched, loading: true, groups: [], count: 0 };
+  const rawShuttles = (data.ShuttleServiceResult || {}).shuttles || [];
+  const split = terminalSplit(stopName, rawShuttles);
+  if (split) {
+    const groups = [{ label: 'Departures', cls: '', cards: split.departures.map((s) => ({ shuttle: s, kind: 'departure' })) }];
+    if (split.arrivals.length) {
+      groups.push({ label: 'Arrivals', cls: 'arr', cards: split.arrivals.map((s) => ({ shuttle: s, kind: 'arrival' })) });
+    }
+    return { stopName, term, fetched, groups, count: split.departures.length + split.arrivals.length };
+  }
+  const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
+  return { stopName, term, fetched, groups: [{ label: '', cls: '', cards: shuttles.map((s) => ({ shuttle: s, kind: 'departure' })) }], count: shuttles.length };
+}
+
+function depColumnHtml(col) {
+  const termIcon = col.term
+    ? '<i class="fa-solid fa-flag-checkered terminal-stop-icon" title="Bus terminal"></i>' : '';
+  const head = `<div class="dep-stop-head">
+    <div class="dep-stop-name">${termIcon}${escapeHtml(col.stopName)}</div>
+    <div class="dep-stop-meta">${col.loading ? 'Loading…' : col.count + ' service' + (col.count === 1 ? '' : 's')}</div>
+  </div>`;
+  if (col.loading) return `<div class="dep-stop">${head}</div>`;
+  // The QR card counts toward the column's height budget so cards don't overflow.
+  const totalCards = col.count + (col.qr ? 1 : 0);
+  const FIT_THRESHOLD = 6;
+  const fit = totalCards > FIT_THRESHOLD ? Math.max(0.55, FIT_THRESHOLD / totalCards) : 1;
+  let body = '';
+  for (const g of col.groups) {
+    if (g.label) body += `<div class="dep-group-label ${g.cls}">${g.label}</div>`;
+    body += g.cards.length
+      ? g.cards.map((c) => depCardHtml(c.shuttle, col.fetched, c.kind)).join('')
+      : '<div class="empty">No services running at this stop right now.</div>';
+  }
+  if (col.qr) body += depQrCardHtml();
+  return `<div class="dep-stop" style="--fit: ${fit.toFixed(3)};">${head}${body}</div>`;
 }
 
 function renderShuttles() {
   if (IS_MOBILE()) return renderShuttlesMobile();
-  renderDesktopQr();
   const board = document.getElementById('depBoard');
   const stops = getStops();
   if (!stops.length) {
@@ -2242,9 +2241,17 @@ function renderShuttles() {
     board.innerHTML = '<div class="empty" style="padding:2rem;">Add a stop above to see live arrivals.</div>';
     return;
   }
-  const cols = stops.flatMap(depStopHtml);
+  const cols = stops.map(buildStopColumn);
+  // Pack the QR card into the loaded column with the fewest cards (ties → leftmost).
+  let minIdx = -1;
+  for (let i = 0; i < cols.length; i++) {
+    if (cols[i].loading) continue;
+    if (minIdx === -1 || cols[i].count < cols[minIdx].count) minIdx = i;
+  }
+  if (minIdx !== -1) cols[minIdx].qr = true;
   board.style.setProperty('--cols', Math.max(1, cols.length));
-  board.innerHTML = cols.join('');
+  board.innerHTML = cols.map(depColumnHtml).join('');
+  renderDepQr();
 }
 
 /* ==== mobile renderers (phone-native; reuse the same data + helpers) ==== */
