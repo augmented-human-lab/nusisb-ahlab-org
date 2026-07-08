@@ -1073,14 +1073,15 @@
     background: white;
   }
   .stop-add-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,61,124,0.12); }
+  /* Sits in the blue header bar → white text + white outline. */
   .stop-add-btn {
     display: inline-flex; align-items: center; gap: 0.35rem;
-    border: 1px dashed var(--primary); border-radius: 999px;
+    border: 1px dashed rgba(255,255,255,0.65); border-radius: 999px;
     padding: 0.3rem 0.85rem; font: inherit; font-size: 0.82rem; font-weight: 700;
-    color: var(--primary); background: rgba(0,61,124,0.05); cursor: pointer; transition: background 0.15s;
+    color: #fff; background: rgba(255,255,255,0.10); cursor: pointer; transition: background 0.15s, border-color 0.15s;
   }
-  .stop-add-btn:hover { background: rgba(0,61,124,0.12); }
-  .stop-add-full { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.4rem; }
+  .stop-add-btn:hover { background: rgba(255,255,255,0.20); border-color: rgba(255,255,255,0.9); }
+  .stop-add-full { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.75); padding: 0.3rem 0.4rem; }
 
   /* Terminal column: a group is [vertical "DEPARTURES/ARRIVALS" rail | card stack].
      Putting the label in a left rail (instead of a header row) keeps every card
@@ -1104,7 +1105,7 @@
     background: linear-gradient(135deg, var(--primary), #00509e); color: #fff; border-color: transparent;
   }
   .dep-qr-card .dep-qr-code { flex: 0 0 auto; width: calc(64px * var(--fit, 1)); height: calc(64px * var(--fit, 1));
-    background: #fff; border-radius: 10px; padding: 5px; display: flex; align-items: center; justify-content: center; }
+    background: transparent; display: flex; align-items: center; justify-content: center; }
   .dep-qr-card .dep-qr-code img, .dep-qr-card .dep-qr-code canvas {
     display: block; width: calc(54px * var(--fit, 1)) !important; height: calc(54px * var(--fit, 1)) !important; }
   .dep-qr-card .dep-qr-link { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.6rem; text-align: center; }
@@ -1148,7 +1149,7 @@
   .dep-stop > .dep-card .dep-times     { gap: calc(1.5rem * var(--fit)); }
   .dep-stop-head {
     display: flex;
-    align-items: baseline;
+    align-items: flex-end;
     justify-content: space-between;
     padding: 0.4rem 0.2rem 0.55rem;
     border-bottom: 3px solid var(--primary);
@@ -1156,6 +1157,7 @@
     gap: 0.6rem;
     flex-wrap: wrap;
   }
+  .dep-stop-id { min-width: 0; }
   .dep-stop-name {
     font-size: clamp(1.4rem, 2.5vw, 2rem);
     font-weight: 800;
@@ -1163,7 +1165,9 @@
     color: var(--text);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  .dep-stop-meta { font-size: 0.78rem; color: var(--text-muted); }
+  .dep-stop-full { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-top: 0.1rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dep-stop-meta { font-size: 0.78rem; color: var(--text-muted); flex: 0 0 auto; }
 
   .dep-card {
     background: var(--card);
@@ -1541,8 +1545,11 @@
   /* Departure stop cards */
   body.is-mobile .m-stopcard { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 0.85rem; overflow: hidden; }
   body.is-mobile .m-sc-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.95rem; border-bottom: 1px solid var(--border); }
+  body.is-mobile .m-sc-id { min-width: 0; }
   body.is-mobile .m-sc-nm { font-size: 1.05rem; font-weight: 800; }
-  body.is-mobile .m-sc-sub { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+  body.is-mobile .m-sc-full { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-top: 0.1rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.is-mobile .m-sc-sub { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; flex: 0 0 auto; }
   body.is-mobile .m-deprow { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.95rem; }
   body.is-mobile .m-deprow + .m-deprow { border-top: 1px solid #f0f3f7; }
   body.is-mobile .m-mid { flex: 1; min-width: 0; }
@@ -1560,7 +1567,6 @@
   body.is-mobile .m-kind-arrival { background: #fafbfd; }
   body.is-mobile .m-kind-arrival .m-sc-head { background: #f4f6fa; }
   body.is-mobile .m-kind-arrival .m-sc-nm { color: var(--primary); }
-  body.is-mobile .m-dir-arr { color: var(--primary); font-weight: 800; margin-right: 0.1rem; }
 
   /* Route badge */
   body.is-mobile .m-rb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; color: #fff;
@@ -1841,6 +1847,47 @@ const ROUTE_DESCRIPTION = {
   'R1': 'Kent Vale → UTown → CLB → BIZ → PGP',
   'R2': 'PGP → BIZ → IT → UTown → Kent Vale',
 };
+// Human-readable stop names. "-OPP" codes derive as "Opp <base>" via stopFullName().
+// NOTE: best-effort NUS names — confirm/correct any that are wrong.
+const STOP_NAMES = {
+  'AS5':  'Ventus (AS5)',
+  'BG-MRT': 'Botanic Gardens MRT',
+  'BIZ2': 'School of Business (BIZ 2)',
+  'CG':   'College Green',
+  'CLB':  'Central Library',
+  'COM3': 'School of Computing (COM 3)',
+  'HSSML': 'Hon Sui Sen Memorial Library',
+  'IT':   'Information Technology',
+  'JP-SCH-16151': 'Japanese School',
+  'KR-MRT': 'Kent Ridge MRT',
+  'KRB':  'Kent Ridge Bus Terminal',
+  'KV':   'Kent Vale',
+  'LT13': 'Lecture Theatre 13',
+  'LT27': 'Lecture Theatre 27',
+  'MUSEUM': 'NUS Museum',
+  'NUSS': 'NUS Society (Guild House)',
+  'OTH':  'Oei Tiong Ham Building',
+  'PGP':  "Prince George's Park",
+  'PGPR': "Prince George's Park Residences",
+  'RAFFLES': 'Raffles Hall',
+  'S17':  'Science (S17)',
+  'SDE3': 'School of Design & Environment (SDE 3)',
+  'TCOMS': 'TCOMS',
+  'UHALL': 'University Hall',
+  'UHC':  'University Health Centre',
+  'UTOWN': 'University Town',
+  'YIH':  'Yusof Ishak House',
+};
+// Full name for a stop code; "<base>-OPP" → "Opp <base name>".
+function stopFullName(code) {
+  const c = String(code || '').toUpperCase();
+  if (STOP_NAMES[c]) return STOP_NAMES[c];
+  if (c.endsWith('-OPP')) {
+    const base = STOP_NAMES[c.slice(0, -4)];
+    if (base) return 'Opp ' + base;
+  }
+  return '';
+}
 // Service hours + frequency, from the official flyers (term schedule).
 const ROUTE_SCHEDULE = {
   'A1': { wk: '0715–2300', sat: '0715–2300', sun: '0907–2300', freq: '5–15 min' },
@@ -2144,11 +2191,9 @@ function depCardHtml(shuttle, fetchedAt, kind) {
   const kindCls = kind === 'arrival' ? 'kind-arrival' : '';
   const routeForCriticality = kind === 'arrival' ? '__arrival__' : route; // suppress urgency colour on arrival cards
 
-  const arrowHtml = kind === 'arrival' ? '<span class="badge-arr-arrow">↓</span>' : '';
-
   if (!next) {
     return `<div class="dep-card no-data ${kindCls}">
-      <div class="dep-route-badge ${cls}">${escapeHtml(display)}${arrowHtml}</div>
+      <div class="dep-route-badge ${cls}">${escapeHtml(display)}</div>
       <div class="dep-body">
         <div class="dep-times">
           <div class="dep-time-col"><span class="dep-eta no-data">No upcoming arrivals</span></div>
@@ -2159,7 +2204,7 @@ function depCardHtml(shuttle, fetchedAt, kind) {
 
   const isImminent = kind !== 'arrival' && next.eta_s < 60;
   return `<div class="dep-card ${isImminent ? 'imminent' : ''} ${kindCls}">
-    <div class="dep-route-badge ${cls}">${escapeHtml(display)}${arrowHtml}</div>
+    <div class="dep-route-badge ${cls}">${escapeHtml(display)}</div>
     <div class="dep-body">
       <div class="dep-times">
         ${depTimeCol(next, fetchedAt, 'Next', routeForCriticality)}
@@ -2175,9 +2220,18 @@ function depQrCardHtml() {
   return `<div class="dep-card dep-qr-card">
     <div class="dep-qr-code" id="depQrCode"></div>
     <div class="dep-qr-tx">
-      <div class="dep-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Best on your phone</div>
-      <div class="dep-qr-s">Scan to open the live tracker on your mobile.</div>
+      <div class="dep-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Going out?</div>
+      <div class="dep-qr-s">Scan to take the live tracker with you on your phone.</div>
     </div>
+  </div>`;
+}
+// A shimmering placeholder card shown while a stop's first data is loading.
+function depSkelCardHtml() {
+  const bar = (w, h, mb) => `<span class="skel" style="display:block;width:${w};height:${h}px;${mb ? 'margin-bottom:' + mb + 'px;' : ''}"></span>`;
+  const col = `<div class="dep-time-col">${bar('55%', 11, 9)}${bar('78%', 30)}</div>`;
+  return `<div class="dep-card dep-skel-card">
+    <span class="skel" style="width:64px;height:64px;border-radius:12px;flex:0 0 auto"></span>
+    <div class="dep-body"><div class="dep-times">${col}${col}</div></div>
   </div>`;
 }
 // Generate the QR into #depQrCode (regenerated each render since the board's
@@ -2193,7 +2247,9 @@ function renderDepQr() {
     if (!depQrRetry) { depQrRetry = true; window.addEventListener('load', () => { if (currentView === 'shuttle' && !IS_MOBILE()) renderShuttles(); }, { once: true }); }
     return;
   }
-  new QRCode(host, { text: url, width: 132, height: 132, colorDark: '#003d7c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  // Inverted (white modules on a transparent background) so it sits directly on
+  // the card's blue gradient — no white box needed.
+  new QRCode(host, { text: url, width: 132, height: 132, colorDark: '#ffffff', colorLight: 'rgba(0,0,0,0)', correctLevel: QRCode.CorrectLevel.M });
   // Pin the QR card to the exact height of a normal card in the same column.
   const card = host.closest('.dep-qr-card');
   const sib = card && card.parentElement.querySelector('.dep-card:not(.dep-qr-card)');
@@ -2223,11 +2279,15 @@ function buildStopColumn(stopName) {
 function depColumnHtml(col) {
   const termIcon = col.term
     ? '<i class="fa-solid fa-flag-checkered terminal-stop-icon" title="Bus terminal"></i>' : '';
+  const full = stopFullName(col.stopName);
   const head = `<div class="dep-stop-head">
-    <div class="dep-stop-name">${termIcon}${escapeHtml(col.stopName)}</div>
+    <div class="dep-stop-id">
+      <div class="dep-stop-name">${termIcon}${escapeHtml(col.stopName)}</div>
+      ${full ? `<div class="dep-stop-full">${escapeHtml(full)}</div>` : ''}
+    </div>
     <div class="dep-stop-meta">${col.loading ? 'Loading…' : col.count + ' service' + (col.count === 1 ? '' : 's')}</div>
   </div>`;
-  if (col.loading) return `<div class="dep-stop">${head}</div>`;
+  if (col.loading) return `<div class="dep-stop" style="--fit:1;">${head}${depSkelCardHtml()}${depSkelCardHtml()}${depSkelCardHtml()}</div>`;
   // The QR card counts toward the column's height budget so cards don't overflow.
   const totalCards = col.count + (col.qr ? 1 : 0);
   const FIT_THRESHOLD = 6;
@@ -2608,10 +2668,9 @@ function mDepRow(s, fetched, kind) {
   const following = etas[1];
   const desc = ROUTE_DESCRIPTION[disp] || (isPublicRoute(route) ? 'Public bus' : '');
   const isArr = kind === 'arrival';
-  const dirArrow = isArr ? '<span class="m-dir-arr">↓</span> ' : '';
   if (!next || typeof next.eta_s !== 'number') {
     return `<div class="m-deprow">${mRouteBadge(route)}
-      <div class="m-mid"><div class="m-dir">${dirArrow}${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+      <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
       <div class="m-eta"><span class="m-eta-na">No buses</span></div></div>`;
   }
   const sec = Math.max(0, next.eta_s);
@@ -2620,7 +2679,7 @@ function mDepRow(s, fetched, kind) {
   const then = (following && typeof following.eta_s === 'number')
     ? `<div class="m-then">then ${etaLabel(Math.max(0, following.eta_s))}</div>` : '';
   return `<div class="m-deprow">${mRouteBadge(route)}
-    <div class="m-mid"><div class="m-dir">${dirArrow}${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+    <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
     <div class="m-eta">
       <span class="dep-eta ${crit}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(critRoute)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span>
       ${then}
@@ -2628,7 +2687,8 @@ function mDepRow(s, fetched, kind) {
 }
 // One mobile stop card. data-stop carries the stop; showDel adds the trash button.
 function mCardShell(stopName, title, termInline, sub, rowsHtml, showDel, kindCls) {
-  const nm = `<div class="m-sc-nm">${escapeHtml(title)}${termInline}</div>`;
+  const full = stopFullName(stopName);
+  const nm = `<div class="m-sc-id"><div class="m-sc-nm">${escapeHtml(title)}${termInline}</div>${full ? `<div class="m-sc-full">${escapeHtml(full)}</div>` : ''}</div>`;
   const del = showDel
     ? `<button class="m-sc-del" data-remove-card="${escapeHtml(stopName)}" aria-label="Remove ${escapeHtml(stopName)}"><i class="fa-solid fa-trash-can"></i></button>`
     : '';
