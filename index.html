@@ -35,6 +35,8 @@
 <meta name="apple-mobile-web-app-title" content="NUS ISB">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<!-- QR generator (client-side; nothing leaves the browser) — powers the desktop "open on your phone" card -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --primary: #003d7c;
@@ -1071,6 +1073,31 @@
     background: white;
   }
   .stop-add-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,61,124,0.12); }
+  .stop-add-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    border: 1px dashed var(--primary); border-radius: 999px;
+    padding: 0.3rem 0.85rem; font: inherit; font-size: 0.82rem; font-weight: 700;
+    color: var(--primary); background: rgba(0,61,124,0.05); cursor: pointer; transition: background 0.15s;
+  }
+  .stop-add-btn:hover { background: rgba(0,61,124,0.12); }
+  .stop-add-full { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.4rem; }
+
+  /* Desktop "open on your phone" QR card — hidden on phones (mobile IS the phone). */
+  .desktop-qr { display: none; }
+  body:not(.is-mobile) .desktop-qr {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 1.25rem;
+    margin: 1rem 1rem 0; padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, var(--primary), #00509e); color: #fff;
+    border-radius: 16px; box-shadow: var(--shadow);
+  }
+  .desktop-qr-code { flex: 0 0 auto; width: 132px; height: 132px; background: #fff;
+    border-radius: 10px; padding: 8px; display: flex; align-items: center; justify-content: center; }
+  .desktop-qr-code img, .desktop-qr-code canvas { display: block; width: 116px !important; height: 116px !important; }
+  .desktop-qr-link { color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; text-align: center; padding: 0 6px; }
+  .desktop-qr-tx { min-width: 0; }
+  .desktop-qr-t { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.5rem; }
+  .desktop-qr-t i { color: var(--accent); }
+  .desktop-qr-s { font-size: 0.9rem; opacity: 0.92; margin-top: 0.35rem; line-height: 1.45; max-width: 44ch; }
 
   .dep-board {
     flex: 1;
@@ -1438,36 +1465,48 @@
   body.is-mobile .m-near-tag { flex: 0 0 auto; margin-left: 0.5rem; width: 28px; height: 28px; border-radius: 50%;
     background: rgba(42,157,143,0.15); color: var(--low); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
 
-  /* Stop picker (bottom sheet) */
-  #stopPicker { position: fixed; inset: 0; z-index: 95000; visibility: hidden; }
-  #stopPicker.open { visibility: visible; }
-  #stopPicker .picker-backdrop { position: absolute; inset: 0; background: rgba(10,18,35,0.45);
-    opacity: 0; transition: opacity 0.2s; }
-  #stopPicker.open .picker-backdrop { opacity: 1; }
-  #stopPicker .picker-sheet {
-    position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%; display: flex; flex-direction: column;
-    background: var(--bg); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(10,18,35,0.3);
-    transform: translateY(100%); transition: transform 0.25s ease-out;
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Stop picker — fullscreen grid of stop cards (desktop + mobile) */
+  #stopPicker { position: fixed; inset: 0; z-index: 95000; display: none; }
+  #stopPicker.open { display: flex; }
+  body.picker-open { overflow: hidden; }
+  #stopPicker .picker-panel {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    background: var(--bg); animation: pickerIn 0.18s ease-out;
   }
-  #stopPicker.open .picker-sheet { transform: translateY(0); }
-  .picker-head { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1rem 0.6rem; }
-  .picker-title { font-size: 1.05rem; font-weight: 800; flex: 1; }
-  .picker-note { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-left: 0.4rem; }
-  .picker-x { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--border);
-    color: var(--text); cursor: pointer; font-size: 0.9rem; }
-  .picker-searchbar { display: flex; align-items: center; gap: 0.55rem; margin: 0 1rem 0.6rem;
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem 0.85rem; color: var(--text-muted); }
-  .picker-searchbar input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 0.95rem; color: var(--text); outline: none; }
-  .picker-list { flex: 1; overflow-y: auto; padding: 0 0.75rem 1rem; -webkit-overflow-scrolling: touch; }
-  .m-pick { display: flex; align-items: center; width: 100%; padding: 0.85rem 0.9rem; margin-bottom: 0.4rem;
-    border: 1px solid var(--border); border-radius: 12px; background: var(--card); font: inherit; cursor: pointer; }
-  .m-pick-nm { flex: 1; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text); }
-  .m-pick-mark { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; background: #eef1f5; color: var(--text-muted); font-size: 0.8rem; }
-  .m-pick.on { border-color: var(--low); background: rgba(42,157,143,0.08); }
-  .m-pick.on .m-pick-mark { background: var(--low); color: #fff; }
-  .m-pick[disabled] { opacity: 0.45; cursor: default; }
+  @keyframes pickerIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
+  .picker-head { display: flex; align-items: center; gap: 0.6rem; padding: 1rem 1.1rem;
+    background: var(--card); border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+  .picker-title { font-size: 1.15rem; font-weight: 800; flex: 1; }
+  .picker-note { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-left: 0.5rem; }
+  .picker-x { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--border);
+    color: var(--text); cursor: pointer; font-size: 0.95rem; flex: 0 0 auto; }
+  .picker-x:hover { background: #dbe1ea; }
+  .picker-grid { flex: 1; overflow-y: auto; display: grid; align-content: start;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 0.7rem;
+    padding: 1rem; -webkit-overflow-scrolling: touch; }
+  .picker-card { position: relative; display: flex; flex-direction: column; gap: 0.3rem;
+    padding: 0.95rem 0.9rem; border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--card); cursor: pointer; font: inherit; text-align: left;
+    transition: border-color 0.15s, background 0.15s, transform 0.08s, box-shadow 0.15s; }
+  .picker-card:hover:not([disabled]) { border-color: var(--primary); box-shadow: var(--shadow); }
+  .picker-card:active:not([disabled]) { transform: scale(0.98); }
+  .picker-card .pc-nm { font-size: 1.02rem; font-weight: 800; color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; }
+  .picker-card .pc-tag { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+  .picker-card .pc-mark { position: absolute; top: 0.55rem; right: 0.55rem; width: 22px; height: 22px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem;
+    background: #eef1f5; color: var(--text-muted); }
+  .picker-card.on { border-color: var(--low); background: rgba(42,157,143,0.10); }
+  .picker-card.on .pc-mark { background: var(--low); color: #fff; }
+  .picker-card[disabled] { opacity: 0.4; cursor: default; }
+  .picker-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.85rem 1.1rem calc(0.85rem + env(safe-area-inset-bottom));
+    background: var(--card); border-top: 1px solid var(--border); }
+  .picker-hint { flex: 1; font-size: 0.8rem; color: var(--text-muted); }
+  .picker-done { border: 0; border-radius: 999px; background: var(--primary); color: #fff; font: inherit;
+    font-weight: 700; font-size: 0.92rem; padding: 0.6rem 1.7rem; cursor: pointer; }
+  .picker-done:hover { background: var(--primary-strong, #00509e); }
+  .picker-done:active { transform: translateY(1px); }
 
   /* Per-card delete + "Remove?" confirmation */
   body.is-mobile .m-sc-del {
@@ -1503,6 +1542,11 @@
   body.is-mobile .m-eta .dep-eta-unit { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
   body.is-mobile .m-eta .m-then { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.15rem; }
   body.is-mobile .m-eta .m-eta-na { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+  /* Arrival card (terminal "<Stop> Arrival") — muted, secondary to the departure card. */
+  body.is-mobile .m-kind-arrival { background: #fafbfd; }
+  body.is-mobile .m-kind-arrival .m-sc-head { background: #f4f6fa; }
+  body.is-mobile .m-kind-arrival .m-sc-nm { color: var(--primary); }
+  body.is-mobile .m-dir-arr { color: var(--primary); font-weight: 800; margin-right: 0.1rem; }
 
   /* Route badge */
   body.is-mobile .m-rb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; color: #fff;
@@ -1568,18 +1612,19 @@
   </div>
 </div>
 
-<!-- Stop picker (mobile) — searchable bottom sheet opened by the "Add a stop" button -->
+<!-- Stop picker — fullscreen grid of every stop; tap a card to add/remove.
+     Auto-closes after 15s of no interaction. Opened by any [data-open-picker]. -->
 <div id="stopPicker" aria-hidden="true">
-  <div class="picker-backdrop" data-picker-close></div>
-  <div class="picker-sheet" role="dialog" aria-label="Add a stop">
+  <div class="picker-panel" role="dialog" aria-label="Choose your stops">
     <div class="picker-head">
-      <div class="picker-title">Add a stop <span id="pickerNote" class="picker-note"></span></div>
+      <div class="picker-title">Choose your stops <span id="pickerNote" class="picker-note"></span></div>
       <button class="picker-x" data-picker-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="picker-searchbar"><i class="fa-solid fa-magnifying-glass"></i>
-      <input id="pickerSearch" type="text" placeholder="Search stops…" autocomplete="off" spellcheck="false">
+    <div class="picker-grid" id="pickerGrid"></div>
+    <div class="picker-foot">
+      <span class="picker-hint"><i class="fa-regular fa-hand-pointer"></i> Tap a stop to add or remove it</span>
+      <button class="picker-done" data-picker-close>Done</button>
     </div>
-    <div class="picker-list" id="pickerList"></div>
   </div>
 </div>
 <script>
@@ -1625,6 +1670,7 @@
 
 <main>
   <div class="view" id="shuttleView">
+    <div class="desktop-qr" id="desktopQr"></div>
     <div class="dep-board" id="depBoard"><div class="empty">Loading…</div></div>
   </div>
 
@@ -1737,7 +1783,7 @@ const apiUrl = (p) => {
 
 /* ==== state ==== */
 const STOPS_KEY = 'nus-isb-stops';
-const DEFAULT_STOPS = ['COM3', 'BIZ2'];
+const DEFAULT_STOPS = ['COM3', 'BIZ2', 'TCOMS-OPP', 'IT'];
 const MAX_STOPS = 4;
 const getStops = () => {
   const fromUrl = new URLSearchParams(location.search).get('stops');
@@ -2021,6 +2067,30 @@ function shuttleAtTerminal(stopName, routeName, rawShuttles) {
   ));
   return { departure: dep, arrival: arr };
 }
+// Sort consolidated shuttles by their most-imminent ETA (ascending).
+const byEtaAsc = (a, b) =>
+  ((a._etas[0] && a._etas[0].eta_s) ?? Infinity) - ((b._etas[0] && b._etas[0].eta_s) ?? Infinity);
+// For a terminal stop, separate every route into a departing stream (-S) and an
+// arriving stream (-E) so the two can be shown as distinct cards
+// ("<Stop> Departure" / "<Stop> Arrival"). Returns null for non-terminal stops.
+function terminalSplit(stopName, rawShuttles) {
+  if (!TERMINAL_STOPS.has(stopName)) return null;
+  const consolidated = consolidateShuttles(rawShuttles);
+  const departures = [], arrivals = [];
+  for (const m of consolidated) {
+    const term = shuttleAtTerminal(stopName, m.name, rawShuttles);
+    if (term && term.departure && term.arrival &&
+        term.departure._etas.length > 0 && term.arrival._etas.length > 0) {
+      departures.push(term.departure);
+      arrivals.push(term.arrival);
+    } else {
+      departures.push(m);
+    }
+  }
+  departures.sort(byEtaAsc);
+  arrivals.sort(byEtaAsc);
+  return { departures, arrivals };
+}
 // eta_s is seconds-until-arrival; convert to display.
 function depEtaText(seconds) {
   if (seconds <= 0) return 'NOW';
@@ -2086,76 +2156,95 @@ function depCardHtml(shuttle, fetchedAt, kind) {
   </div>`;
 }
 
-function depStopHtml(stopName) {
-  const data = lastShuttles[stopName];
-  const fetched = shuttleFetchedAt[stopName] || Date.now();
-  if (!data) {
-    return `<div class="dep-stop">
-      <div class="dep-stop-head">
-        <div class="dep-stop-name">${escapeHtml(stopName)}</div>
-        <div class="dep-stop-meta">Loading…</div>
-      </div>
-    </div>`;
-  }
-  const r = data.ShuttleServiceResult || {};
-  const rawShuttles = r.shuttles || [];
-  const shuttles = consolidateShuttles(rawShuttles);
-  // Sort by smallest next ETA so most-imminent is on top.
-  shuttles.sort((a, b) => {
-    const ea = (a._etas[0] && a._etas[0].eta_s) ?? Infinity;
-    const eb = (b._etas[0] && b._etas[0].eta_s) ?? Infinity;
-    return ea - eb;
-  });
-  // For terminal stops, split each route into a departure card (-S) and an
-  // arrival card (-E). Otherwise, one merged card per route.
-  // Arrivals are collected separately and appended at the end of the list,
-  // sorted by their own next ETA.
-  const departures = [];
-  const arrivals = [];
-  for (const m of shuttles) {
-    const term = shuttleAtTerminal(stopName, m.name, rawShuttles);
-    if (term && term.departure && term.arrival &&
-        term.departure._etas.length > 0 && term.arrival._etas.length > 0) {
-      departures.push({ shuttle: term.departure, kind: 'departure' });
-      arrivals.push({ shuttle: term.arrival,     kind: 'arrival' });
-    } else {
-      departures.push({ shuttle: m, kind: 'departure' });
-    }
-  }
-  arrivals.sort((a, b) => {
-    const ea = (a.shuttle._etas[0] && a.shuttle._etas[0].eta_s) ?? Infinity;
-    const eb = (b.shuttle._etas[0] && b.shuttle._etas[0].eta_s) ?? Infinity;
-    return ea - eb;
-  });
-  const cards = [...departures, ...arrivals];
-  const termIcon = TERMINAL_STOPS.has(stopName)
-    ? '<i class="fa-solid fa-flag-checkered terminal-stop-icon" title="Bus terminal"></i>'
-    : '';
+// One departure-board column (a titled stack of route cards).
+function depColHtml(title, meta, termIcon, cards, fetched) {
   const head = `<div class="dep-stop-head">
-    <div class="dep-stop-name">${termIcon}${escapeHtml(stopName)}</div>
-    <div class="dep-stop-meta">${shuttles.length} service${shuttles.length === 1 ? '' : 's'}</div>
+    <div class="dep-stop-name">${termIcon}${escapeHtml(title)}</div>
+    <div class="dep-stop-meta">${escapeHtml(meta)}</div>
   </div>`;
   const body = cards.length
     ? cards.map((c) => depCardHtml(c.shuttle, fetched, c.kind)).join('')
     : '<div class="empty">No services running at this stop right now.</div>';
-  // FIT_THRESHOLD now applies to total card count (terminals double up).
   const FIT_THRESHOLD = 6;
-  const fit = cards.length > FIT_THRESHOLD
-    ? Math.max(0.55, FIT_THRESHOLD / cards.length)
-    : 1;
+  const fit = cards.length > FIT_THRESHOLD ? Math.max(0.55, FIT_THRESHOLD / cards.length) : 1;
   return `<div class="dep-stop" style="--fit: ${fit.toFixed(3)};">${head}${body}</div>`;
+}
+
+// Returns an ARRAY of column-HTML strings: one column for a normal stop, or two
+// ("<Stop> Departure" / "<Stop> Arrival") for a terminal that has both streams.
+function depStopHtml(stopName) {
+  const data = lastShuttles[stopName];
+  const fetched = shuttleFetchedAt[stopName] || Date.now();
+  const termIcon = TERMINAL_STOPS.has(stopName)
+    ? '<i class="fa-solid fa-flag-checkered terminal-stop-icon" title="Bus terminal"></i>'
+    : '';
+  if (!data) {
+    return [`<div class="dep-stop">
+      <div class="dep-stop-head">
+        <div class="dep-stop-name">${termIcon}${escapeHtml(stopName)}</div>
+        <div class="dep-stop-meta">Loading…</div>
+      </div>
+    </div>`];
+  }
+  const rawShuttles = (data.ShuttleServiceResult || {}).shuttles || [];
+  const split = terminalSplit(stopName, rawShuttles);
+  const svcMeta = (n) => `${n} service${n === 1 ? '' : 's'}`;
+  if (split) {
+    const depCards = split.departures.map((s) => ({ shuttle: s, kind: 'departure' }));
+    const arrCards = split.arrivals.map((s) => ({ shuttle: s, kind: 'arrival' }));
+    const cols = [depColHtml(stopName + ' Departure', svcMeta(depCards.length), termIcon, depCards, fetched)];
+    if (arrCards.length) {
+      cols.push(depColHtml(stopName + ' Arrival', svcMeta(arrCards.length), termIcon, arrCards, fetched));
+    }
+    return cols;
+  }
+  const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
+  const cards = shuttles.map((s) => ({ shuttle: s, kind: 'departure' }));
+  return [depColHtml(stopName, svcMeta(shuttles.length), termIcon, cards, fetched)];
+}
+
+// Desktop-only card nudging the user onto their phone. The QR encodes the live
+// URL (with the current ?stops=…) and is generated entirely in the browser.
+let desktopQrUrl = '', desktopQrRetry = false;
+function renderDesktopQr() {
+  const el = document.getElementById('desktopQr');
+  if (!el) return;
+  if (IS_MOBILE()) { el.style.display = 'none'; return; }
+  if (!el.dataset.built) {
+    el.innerHTML = `<div class="desktop-qr-code"></div>
+      <div class="desktop-qr-tx">
+        <div class="desktop-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Best on your phone</div>
+        <div class="desktop-qr-s">Scan to open the live tracker on your mobile — arrivals, a nearest-stop compass and a pocket-sized map.</div>
+      </div>`;
+    el.dataset.built = '1';
+  }
+  el.style.display = 'flex';
+  const url = location.origin + location.pathname + location.search;
+  if (url === desktopQrUrl) return;
+  const host = el.querySelector('.desktop-qr-code');
+  host.innerHTML = '';
+  if (typeof QRCode === 'undefined') {                 // library not loaded yet — link fallback + retry
+    host.innerHTML = `<a class="desktop-qr-link" href="${escapeHtml(url)}">Open link</a>`;
+    if (!desktopQrRetry) { desktopQrRetry = true; window.addEventListener('load', renderDesktopQr, { once: true }); }
+    return;
+  }
+  desktopQrUrl = url;
+  new QRCode(host, { text: url, width: 132, height: 132, colorDark: '#003d7c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 }
 
 function renderShuttles() {
   if (IS_MOBILE()) return renderShuttlesMobile();
+  renderDesktopQr();
   const board = document.getElementById('depBoard');
   const stops = getStops();
-  board.style.setProperty('--cols', Math.max(1, stops.length));
   if (!stops.length) {
+    board.style.setProperty('--cols', 1);
     board.innerHTML = '<div class="empty" style="padding:2rem;">Add a stop above to see live arrivals.</div>';
     return;
   }
-  board.innerHTML = stops.map(depStopHtml).join('');
+  const cols = stops.flatMap(depStopHtml);
+  board.style.setProperty('--cols', Math.max(1, cols.length));
+  board.innerHTML = cols.join('');
 }
 
 /* ==== mobile renderers (phone-native; reuse the same data + helpers) ==== */
@@ -2400,43 +2489,52 @@ function updateNearestLive() {
   });
 }
 
-/* ===== Stop picker (searchable bottom sheet) ===== */
+/* ===== Stop picker (fullscreen grid; auto-closes after 15s idle) ===== */
 function allStopNames() {
   return Array.from(document.querySelectorAll('#stopList option'))
     .map((o) => (o.value || '').trim().toUpperCase()).filter(Boolean).sort();
 }
-function renderPickerList(filter) {
-  const list = document.getElementById('pickerList');
-  if (!list) return;
+function renderPickerGrid() {
+  const grid = document.getElementById('pickerGrid');
+  if (!grid) return;
   const sel = new Set(getStops());
   const full = sel.size >= MAX_STOPS;
-  const q = (filter || '').trim().toUpperCase();
-  const items = allStopNames().filter((s) => !q || s.includes(q));
-  list.innerHTML = items.length ? items.map((s) => {
+  grid.innerHTML = allStopNames().map((s) => {
     const on = sel.has(s);
     const disabled = full && !on;
-    return `<button class="m-pick ${on ? 'on' : ''}" data-pick="${escapeHtml(s)}" ${disabled ? 'disabled' : ''}>
-      <span class="m-pick-nm">${escapeHtml(s)}${TERMINAL_STOPS.has(s) ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.7em;color:var(--text-muted)"></i>' : ''}</span>
-      <span class="m-pick-mark">${on ? '<i class="fa-solid fa-check"></i>' : (disabled ? '' : '<i class="fa-solid fa-plus"></i>')}</span>
+    const term = TERMINAL_STOPS.has(s);
+    const mark = on ? '<i class="fa-solid fa-check"></i>' : (disabled ? '' : '<i class="fa-solid fa-plus"></i>');
+    return `<button class="picker-card ${on ? 'on' : ''}" data-pick="${escapeHtml(s)}" ${disabled ? 'disabled' : ''}>
+      <span class="pc-mark">${mark}</span>
+      <span class="pc-nm">${escapeHtml(s)}</span>
+      <span class="pc-tag">${term ? '<i class="fa-solid fa-flag-checkered"></i> Terminal' : 'Bus stop'}</span>
     </button>`;
-  }).join('') : '<div class="empty" style="padding:1.5rem;">No stops match.</div>';
+  }).join('');
   const note = document.getElementById('pickerNote');
   if (note) note.textContent = `${sel.size}/${MAX_STOPS} selected`;
 }
+// Auto-close after 15s with no pointer/key/scroll activity anywhere on the page.
+const PICKER_IDLE_MS = 15000;
+const PICKER_ACTIVITY = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'wheel', 'click'];
+let pickerIdleTimer = null;
+function resetPickerIdle() { clearTimeout(pickerIdleTimer); pickerIdleTimer = setTimeout(closeStopPicker, PICKER_IDLE_MS); }
+function pickerActivity() { resetPickerIdle(); }
 function openStopPicker() {
   const p = document.getElementById('stopPicker');
   if (!p) return;
-  const input = document.getElementById('pickerSearch');
-  if (input) input.value = '';
-  renderPickerList('');
+  renderPickerGrid();
   p.classList.add('open');
+  p.setAttribute('aria-hidden', 'false');
   document.body.classList.add('picker-open');
-  setTimeout(() => { if (input) input.focus(); }, 50);
+  PICKER_ACTIVITY.forEach((ev) => document.addEventListener(ev, pickerActivity, { passive: true }));
+  resetPickerIdle();
 }
 function closeStopPicker() {
   const p = document.getElementById('stopPicker');
-  if (p) p.classList.remove('open');
+  if (p) { p.classList.remove('open'); p.setAttribute('aria-hidden', 'true'); }
   document.body.classList.remove('picker-open');
+  clearTimeout(pickerIdleTimer);
+  PICKER_ACTIVITY.forEach((ev) => document.removeEventListener(ev, pickerActivity, { passive: true }));
 }
 function pickerToggle(stop) {
   const sel = getStops();
@@ -2447,9 +2545,10 @@ function pickerToggle(stop) {
     setStops([...sel, stop]);
   }
   renderStopChips();
-  renderPickerList(document.getElementById('pickerSearch')?.value || '');
+  renderPickerGrid();
   renderShuttles();
   refresh();
+  resetPickerIdle();
 }
 
 // Per-card delete confirmation. Only one card can be in "Remove?" state at a time;
@@ -2479,38 +2578,51 @@ function confirmRemove(stop) {
   renderShuttles();
   refresh();
 }
-function mDepRow(s, fetched) {
+function mDepRow(s, fetched, kind) {
   const route = s.name || '?';
   const disp = displayRouteName(route);
   const etas = s._etas || [];
   const next = etas[0];
   const following = etas[1];
   const desc = ROUTE_DESCRIPTION[disp] || (isPublicRoute(route) ? 'Public bus' : '');
+  const isArr = kind === 'arrival';
+  const dirArrow = isArr ? '<span class="m-dir-arr">↓</span> ' : '';
   if (!next || typeof next.eta_s !== 'number') {
     return `<div class="m-deprow">${mRouteBadge(route)}
-      <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+      <div class="m-mid"><div class="m-dir">${dirArrow}${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
       <div class="m-eta"><span class="m-eta-na">No buses</span></div></div>`;
   }
   const sec = Math.max(0, next.eta_s);
+  const crit = isArr ? 'arrival' : etaCriticality(sec, route);
+  const critRoute = isArr ? '__arrival__' : route;
   const then = (following && typeof following.eta_s === 'number')
     ? `<div class="m-then">then ${etaLabel(Math.max(0, following.eta_s))}</div>` : '';
   return `<div class="m-deprow">${mRouteBadge(route)}
-    <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
+    <div class="m-mid"><div class="m-dir">${dirArrow}${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
     <div class="m-eta">
-      <span class="dep-eta ${etaCriticality(sec, route)}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(route)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span>
+      <span class="dep-eta ${crit}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(critRoute)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span>
       ${then}
     </div></div>`;
 }
+// One mobile stop card. data-stop carries the stop; showDel adds the trash button.
+function mCardShell(stopName, title, termInline, sub, rowsHtml, showDel, kindCls) {
+  const nm = `<div class="m-sc-nm">${escapeHtml(title)}${termInline}</div>`;
+  const del = showDel
+    ? `<button class="m-sc-del" data-remove-card="${escapeHtml(stopName)}" aria-label="Remove ${escapeHtml(stopName)}"><i class="fa-solid fa-trash-can"></i></button>`
+    : '';
+  return `<div class="m-stopcard ${kindCls}" data-stop="${escapeHtml(stopName)}">
+    <div class="m-sc-head">${nm}<div class="m-sc-sub">${escapeHtml(sub)}</div>${del}</div>
+    ${rowsHtml}</div>`;
+}
 function mStopCardHtml(stopName) {
-  const term = TERMINAL_STOPS.has(stopName)
+  const termInline = TERMINAL_STOPS.has(stopName)
     ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.65em;color:var(--text-muted)"></i>' : '';
-  const nm = `<div class="m-sc-nm">${escapeHtml(stopName)}${term}</div>`;
-  const del = `<button class="m-sc-del" data-remove-card="${escapeHtml(stopName)}" aria-label="Remove ${escapeHtml(stopName)}"><i class="fa-solid fa-trash-can"></i></button>`;
+  const svcMeta = (n) => `${n} service${n === 1 ? '' : 's'}`;
 
   // "Remove?" confirmation — collapsed to the title row + Yes/No (auto-reverts after 5s).
   if (pendingRemove === stopName) {
     return `<div class="m-stopcard m-confirm" data-stop="${escapeHtml(stopName)}">
-      <div class="m-sc-head">${nm}</div>
+      <div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${termInline}</div></div>
       <div class="m-confirm-row"><span class="m-confirm-q">Remove this stop?</span>
         <button class="m-cf m-cf-no" data-confirm-no="${escapeHtml(stopName)}">No</button>
         <button class="m-cf m-cf-yes" data-confirm-yes="${escapeHtml(stopName)}">Yes</button></div>
@@ -2521,18 +2633,28 @@ function mStopCardHtml(stopName) {
   const fetched = shuttleFetchedAt[stopName] || Date.now();
   if (!data) {
     // While loading: no delete button (it's only shown once details are in).
-    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head">${nm}</div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
+    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${termInline}</div></div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
   }
-  const r = data.ShuttleServiceResult || {};
-  const shuttles = consolidateShuttles(r.shuttles || []);
-  shuttles.sort((a, b) =>
-    ((a._etas[0] && a._etas[0].eta_s) ?? Infinity) - ((b._etas[0] && b._etas[0].eta_s) ?? Infinity));
+  const rawShuttles = (data.ShuttleServiceResult || {}).shuttles || [];
+  const noneRow = (txt) => `<div class="empty" style="padding:1rem 0.95rem;">${txt}</div>`;
+
+  // Terminal stops split into a Departure card and an Arrival card.
+  const split = terminalSplit(stopName, rawShuttles);
+  if (split) {
+    const depRows = split.departures.length
+      ? split.departures.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No departures right now.');
+    let html = mCardShell(stopName, stopName + ' Departure', termInline, svcMeta(split.departures.length), depRows, true, '');
+    if (split.arrivals.length) {
+      const arrRows = split.arrivals.map((s) => mDepRow(s, fetched, 'arrival')).join('');
+      html += mCardShell(stopName, stopName + ' Arrival', termInline, svcMeta(split.arrivals.length), arrRows, false, 'm-kind-arrival');
+    }
+    return html;
+  }
+
+  const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
   const rows = shuttles.length
-    ? shuttles.map((s) => mDepRow(s, fetched)).join('')
-    : '<div class="empty" style="padding:1rem 0.95rem;">No services running here right now.</div>';
-  return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}">
-    <div class="m-sc-head">${nm}<div class="m-sc-sub">${shuttles.length} service${shuttles.length === 1 ? '' : 's'}</div>${del}</div>
-    ${rows}</div>`;
+    ? shuttles.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No services running here right now.');
+  return mCardShell(stopName, stopName, termInline, svcMeta(shuttles.length), rows, true, '');
 }
 function renderShuttlesMobile() {
   const board = document.getElementById('depBoard');
@@ -2619,9 +2741,9 @@ function renderStopChips() {
       <button data-remove="${escapeHtml(s)}" title="Remove ${escapeHtml(s)}" aria-label="Remove ${escapeHtml(s)}"><i class="fa-solid fa-xmark"></i></button>
     </span>`
   ).join('') +
-  `<input class="stop-add-input" id="stopAddInput" list="stopList"
-     placeholder="${atMax ? 'Max ' + MAX_STOPS + ' stops' : 'Add stop…'}"
-     autocomplete="off" spellcheck="false" ${atMax ? 'disabled' : ''}>`;
+  (atMax
+    ? `<span class="stop-add-full">Max ${MAX_STOPS} stops</span>`
+    : `<button class="stop-add-btn" data-open-picker><i class="fa-solid fa-plus"></i> Add stop</button>`);
 }
 
 /* ==== render: tickers (alerts) ==== */
@@ -3117,19 +3239,12 @@ async function renderDiagnostics() {
 
 /* ==== events ==== */
 renderStopChips();
-const KNOWN_STOPS = new Set(
-  Array.from(document.querySelectorAll('#stopList option'))
-    .map((o) => (o.value || '').trim().toUpperCase())
-    .filter(Boolean)
-);
-function tryAddStop(v, inputEl) {
+// Add a stop by name (used by the "nearest stop → Track" button). The picker
+// handles the general add/remove flow.
+function tryAddStop(v) {
   if (!v) return;
   const stops = getStops();
-  if (stops.includes(v)) {
-    if (inputEl) inputEl.value = '';
-    return;
-  }
-  if (stops.length >= MAX_STOPS) return;
+  if (stops.includes(v) || stops.length >= MAX_STOPS) return;
   setStops([...stops, v]);
   renderStopChips();
   renderShuttles();
@@ -3137,6 +3252,7 @@ function tryAddStop(v, inputEl) {
 }
 const stopChipsEl = document.getElementById('stopChips');
 stopChipsEl.addEventListener('click', (e) => {
+  if (e.target.closest('[data-open-picker]')) { openStopPicker(); return; }
   const btn = e.target.closest('button[data-remove]');
   if (!btn) return;
   const s = btn.dataset.remove;
@@ -3145,22 +3261,8 @@ stopChipsEl.addEventListener('click', (e) => {
   renderShuttles();
   refresh();
 });
-stopChipsEl.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
-  const input = e.target.closest('.stop-add-input');
-  if (!input) return;
-  e.preventDefault();
-  tryAddStop(input.value.trim().toUpperCase(), input);
-});
-// Datalist click selection: browsers fire `input` with the full option value,
-// no Enter required. Auto-add as soon as the typed/selected value matches a
-// known stop, while still allowing Enter for free-form unknown values.
-stopChipsEl.addEventListener('input', (e) => {
-  const input = e.target.closest('.stop-add-input');
-  if (!input) return;
-  const v = input.value.trim().toUpperCase();
-  if (KNOWN_STOPS.has(v)) tryAddStop(v, input);
-});
+// Stops are now added via the fullscreen picker (opened by the "Add stop" chip);
+// the header no longer has an inline text/datalist input.
 document.getElementById('tabs').addEventListener('click', (e) => {
   const t = e.target.closest('.tab');
   if (t && t.dataset.view) switchView(t.dataset.view);
@@ -3189,17 +3291,16 @@ depBoardEl.addEventListener('click', (e) => {
   if (e.target.closest('[data-compass]')) { enableCompass(); return; }
 });
 
-// Stop picker: search filter, item toggle, close.
+// Stop picker: card toggle + close (Esc / ✕ / Done / 15s idle).
 (() => {
   const picker = document.getElementById('stopPicker');
   if (!picker) return;
-  document.getElementById('pickerSearch')?.addEventListener('input', (e) => renderPickerList(e.target.value));
-  document.getElementById('pickerList')?.addEventListener('click', (e) => {
+  document.getElementById('pickerGrid')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pick]');
     if (b && !b.disabled) pickerToggle(b.dataset.pick);
   });
   picker.addEventListener('click', (e) => { if (e.target.closest('[data-picker-close]')) closeStopPicker(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStopPicker(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && picker.classList.contains('open')) closeStopPicker(); });
 })();
 
 // Left/Right arrow keys cycle through views (skip when typing in a form field).
