@@ -69,6 +69,7 @@
   /* Hidden by default; revealed only when the server reports mode=dev. */
   .dev-only { display: none !important; }
   body[data-mode="dev"] .dev-only { display: revert !important; }
+  body[data-mode="dev"] .map-refresh-btn.dev-only { display: flex !important; }
 
   /* Header + tabs */
   header {
@@ -1712,7 +1713,7 @@
       <button id="mapFullscreenBtn" class="map-refresh-btn map-fullscreen-btn" title="Toggle fullscreen">
         <i class="fa-solid fa-expand"></i>
       </button>
-      <button id="mapRefreshBtn" class="map-refresh-btn" title="Re-bake map (one Static Maps call)">
+      <button id="mapRefreshBtn" class="map-refresh-btn dev-only" title="Re-bake map (one Static Maps call · local dev only)">
         <i class="fa-solid fa-arrows-rotate"></i>
       </button>
     </div>
@@ -3014,10 +3015,13 @@ function layoutMapStage() {
   if (!cw || !ch) return;
   const W = (mapMeta && mapMeta.width) || 640;
   const H = (mapMeta && mapMeta.height) || 360;
-  const scaleFlat = Math.min(cw / W, ch / H);          // upright
-  const scaleRot  = Math.min(cw / H, ch / W);          // rotated 90°
-  const rotate = scaleRot > scaleFlat;
-  const scale = rotate ? scaleRot : scaleFlat;
+  // Pick the orientation that fits the container better (less crop)…
+  const fitFlat = Math.min(cw / W, ch / H);            // upright
+  const fitRot  = Math.min(cw / H, ch / W);            // rotated 90°
+  const rotate = fitRot > fitFlat;
+  // …then COVER: fill the whole container in that orientation (crop the overflow;
+  // the circuit is centred in the baked map so only outer map area is clipped).
+  const scale = rotate ? Math.max(cw / H, ch / W) : Math.max(cw / W, ch / H);
   stage.style.width = (W * scale) + 'px';
   stage.style.height = (H * scale) + 'px';
   stage.style.transform = 'translate(-50%, -50%)' + (rotate ? ' rotate(90deg)' : '');
