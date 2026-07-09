@@ -1,5 +1,5 @@
 // Service worker. VERSION is rewritten by server.js on startup to bust the cache.
-const VERSION = 'static-20260621-authgate';
+const VERSION = 'static-20260709-portrait-map';
 const CACHE = 'nus-isb-' + VERSION;
 
 const SHELL = [

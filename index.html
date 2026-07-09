@@ -1595,16 +1595,19 @@
     height: calc(100dvh - var(--header-h) - 64px - env(safe-area-inset-bottom));
     overflow: hidden;
   }
+  /* Legend as 4 columns × 2 rows (8 routes), with "Hide all" spanning below. */
   body.is-mobile #mapView .route-toggles {
     top: auto; right: auto;
     left: 50%; bottom: 0.85rem;
     transform: translateX(-50%);
-    flex-direction: row; flex-wrap: wrap; justify-content: center;
-    gap: 0.3rem 0.45rem; padding: 0.5rem 0.65rem;
-    max-width: calc(100vw - 1.4rem); max-height: 42vh;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.3rem 0.4rem; padding: 0.5rem 0.6rem;
+    max-width: calc(100vw - 1.4rem);
   }
+  body.is-mobile #mapView .route-toggle { min-width: 0; justify-content: center; gap: 0.4rem; padding: 0.35rem 0.4rem; }
   body.is-mobile #mapView .route-toggles-title { display: none; }
-  body.is-mobile #mapView .route-toggles-allbtn { margin-top: 0; }
+  body.is-mobile #mapView .route-toggles-allbtn { grid-column: 1 / -1; margin-top: 0.1rem; }
 
   /* Diagnostics — stacked table rows become cards */
   body.is-mobile #diagnosticsView .view-scroll { height: auto; overflow: visible; padding: 0.85rem 0.8rem 88px; }
@@ -1662,6 +1665,24 @@
     var touch = (navigator.maxTouchPoints || 0) > 0;
     var minDim = Math.min(screen.width || 9999, screen.height || 9999);
     if (uaMobile || (coarse && touch && minDim < 820)) document.body.classList.add('is-mobile');
+  })();
+
+  // Installed PWA: keep it locked to portrait (reinforces the manifest's
+  // "orientation": "portrait"). Best-effort — silently no-ops where the browser
+  // disallows programmatic locking (e.g. normal browser tabs, iOS).
+  (function lockPortrait() {
+    var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || navigator.standalone === true;
+    if (!standalone) return;
+    function tryLock() {
+      try {
+        var so = screen.orientation;
+        if (so && typeof so.lock === 'function') so.lock('portrait').catch(function () {});
+      } catch (e) {}
+    }
+    tryLock();
+    // Re-assert if the device still manages to rotate it.
+    if (screen.orientation) screen.orientation.addEventListener('change', tryLock);
   })();
 </script>
 
