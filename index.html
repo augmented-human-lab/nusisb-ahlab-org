@@ -426,44 +426,50 @@
   .empty { color: var(--text-muted); font-style: italic; text-align: center; padding: 0.8rem 0; font-size: 0.88rem; }
   .err { color: var(--high); font-size: 0.85rem; padding: 0.5rem 0; }
 
-  /* MAP view — baked Static Maps PNG with SVG/HTML overlays */
+  /* MAP view — baked Static Maps PNG with SVG/HTML overlays.
+     The stage is the map (16:9) sized + centred by layoutMapStage() to fill the
+     view; it rotates 90° when that makes the map larger (portrait windows). */
   #mapView {
-    grid-template-columns: 1fr auto auto 1fr;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
     background: #f5f3f3;  /* matches the Static Maps land tone */
   }
-  /* Specificity-bump: only show as grid when active (id+class beats .view rule). */
-  #mapView.active { display: grid; }
+  /* Specificity-bump: id+class beats the .view flex rule. */
+  #mapView.active { display: block; }
   .map-stage {
-    grid-column: 2;
-    position: relative;
-    aspect-ratio: 16 / 9;
-    height: min(calc(100vh - var(--header-h) - 1.5rem), calc((100vw - 200px) * 9 / 16));
-    width: auto;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);   /* + rotate(90deg) added inline when rotated */
+    transform-origin: center center;
     overflow: hidden;
     background: #f5f3f3;
+    /* width/height are set in px by layoutMapStage() */
   }
   .map-stage:fullscreen {
-    width: 100vw;
-    height: 100vh;
-    aspect-ratio: auto;
+    top: 0; left: 0;
+    transform: none;
+    width: 100vw !important;
+    height: 100vh !important;
     background: #f5f3f3;
   }
-  .map-stage:fullscreen #bakedMap {
-    object-fit: contain;
-  }
+  .map-stage:fullscreen #bakedMap { object-fit: contain; }
+  /* Floating glass legend — top-right on desktop, bottom on mobile. */
   .route-toggles {
-    grid-column: 3;
+    position: absolute;
+    top: 0.85rem; right: 0.85rem;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
-    padding: 0.55rem;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
-    max-height: calc(100vh - var(--header-h) - 1.5rem);
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 14px;
+    box-shadow: 0 6px 22px rgba(16,24,40,0.16);
+    max-height: calc(100% - 1.7rem);
     overflow-y: auto;
   }
   .route-toggles-title {
@@ -474,24 +480,26 @@
     font-weight: 700;
     padding: 0.3rem 0.65rem 0.4rem;
   }
+  /* Upright controls (fullscreen / refresh) — siblings of the stage so they don't rotate. */
+  .map-controls { position: absolute; top: 0.85rem; left: 0.85rem; z-index: 20; display: flex; gap: 0.5rem; }
   .route-toggle {
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    background: white;
+    background: transparent;
     border: 1px solid transparent;
-    padding: 0.45rem 0.7rem;
-    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
     cursor: pointer;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-weight: 700;
     font-size: 0.85rem;
     color: var(--text);
     transition: opacity 0.15s, background 0.15s, border-color 0.15s;
-    min-width: 78px;
+    min-width: 70px;
     text-align: left;
   }
-  .route-toggle:hover { background: #f3f5f8; }
+  .route-toggle:hover { background: rgba(255,255,255,0.55); }
   .route-toggle .swatch {
     width: 22px;
     height: 5px;
@@ -513,32 +521,7 @@
     letter-spacing: 0.05em;
     margin-top: 0.3rem;
   }
-  .route-toggles-allbtn:hover { background: #f3f5f8; }
-  @media (max-width: 700px) {
-    #mapView {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto;
-      overflow-y: auto;
-    }
-    .map-stage {
-      grid-column: 1;
-      grid-row: 1;
-      width: min(95vw, calc(60vh * 16 / 9));
-      height: auto;
-      justify-self: center;
-    }
-    .route-toggles {
-      grid-column: 1;
-      grid-row: 2;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: center;
-      max-height: none;
-      align-self: center;
-    }
-    .route-toggles-title { display: none; }
-    .route-toggles-allbtn { margin-top: 0; }
-  }
+  .route-toggles-allbtn:hover { background: rgba(255,255,255,0.55); }
   .map-stage > #bakedMap,
   .map-stage > #routeOverlay,
   .map-stage > #busOverlay {
@@ -580,30 +563,28 @@
   }
   .baked-stop-marker.is-mrt { border-color: #16a34a; background: #16a34a; }
   .map-refresh-btn {
-    position: absolute;
-    top: 0.6rem;
-    right: 0.6rem;
     width: 36px; height: 36px;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    background: rgba(255,255,255,0.7);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 9px;
     cursor: pointer;
     font-size: 0.85rem;
     color: var(--text);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    box-shadow: 0 2px 8px rgba(16,24,40,0.16);
     pointer-events: auto;
-    z-index: 10;
     display: flex; align-items: center; justify-content: center;
   }
-  .map-refresh-btn:hover { background: #f3f5f8; }
+  .map-refresh-btn:hover { background: rgba(255,255,255,0.92); }
   .map-refresh-btn.spinning i { animation: map-spin 0.8s linear infinite; }
-  .map-fullscreen-btn { right: 3.2rem; }
   @keyframes map-spin { to { transform: rotate(360deg); } }
   .map-baked-at {
     position: absolute;
-    bottom: 0.5rem;
-    left: 0.5rem;
-    background: rgba(255,255,255,0.85);
+    bottom: 0.6rem;
+    left: 0.6rem;
+    z-index: 20;
+    background: rgba(255,255,255,0.7);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     color: var(--text-muted);
     font-size: 0.65rem;
     padding: 0.2rem 0.5rem;
@@ -1606,9 +1587,23 @@
   body.is-mobile #updatesView .card { margin-bottom: 0.85rem; }
 
   /* Map — stacked map + route chips (uses the existing ≤700px responsive rules) */
-  body.is-mobile #mapView { padding-bottom: 88px; }
-  body.is-mobile #mapView .route-toggles { padding: 0.6rem 0.7rem; gap: 0.45rem; }
-  body.is-mobile #mapView .map-stage { width: min(96vw, calc(64vh * 16 / 9)); margin-top: 0.7rem; }
+  /* Map fills the area between the header and the bottom tab bar. Legend moves to
+     a floating glass bar centred near the bottom (just above the tab bar). */
+  body.is-mobile #mapView { padding-bottom: 0; }
+  body.is-mobile #mapView.active {
+    height: calc(100dvh - var(--header-h) - 64px - env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+  body.is-mobile #mapView .route-toggles {
+    top: auto; right: auto;
+    left: 50%; bottom: 0.85rem;
+    transform: translateX(-50%);
+    flex-direction: row; flex-wrap: wrap; justify-content: center;
+    gap: 0.3rem 0.45rem; padding: 0.5rem 0.65rem;
+    max-width: calc(100vw - 1.4rem); max-height: 42vh;
+  }
+  body.is-mobile #mapView .route-toggles-title { display: none; }
+  body.is-mobile #mapView .route-toggles-allbtn { margin-top: 0; }
 
   /* Diagnostics — stacked table rows become cards */
   body.is-mobile #diagnosticsView .view-scroll { height: auto; overflow: visible; padding: 0.85rem 0.8rem 88px; }
@@ -1711,14 +1706,17 @@
       <img id="bakedMap" alt="NUS campus map">
       <svg id="routeOverlay" preserveAspectRatio="none"></svg>
       <div id="busOverlay"></div>
+    </div>
+    <!-- Controls + baked-at are siblings of the stage so they stay upright when it rotates -->
+    <div class="map-controls">
       <button id="mapFullscreenBtn" class="map-refresh-btn map-fullscreen-btn" title="Toggle fullscreen">
         <i class="fa-solid fa-expand"></i>
       </button>
       <button id="mapRefreshBtn" class="map-refresh-btn" title="Re-bake map (one Static Maps call)">
         <i class="fa-solid fa-arrows-rotate"></i>
       </button>
-      <div id="mapBakedAt" class="map-baked-at"></div>
     </div>
+    <div id="mapBakedAt" class="map-baked-at"></div>
     <div class="route-toggles" id="routeToggles">
       <div class="route-toggles-title">Routes</div>
     </div>
@@ -3001,12 +2999,42 @@ function drawBakedBusMarkers() {
   }).join('');
 }
 
+// Size the map stage to fill the view (centred), rotating 90° when that makes
+// the map larger — e.g. a portrait window fits the landscape circuit better.
+function layoutMapStage() {
+  const view = document.getElementById('mapView');
+  const stage = view && view.querySelector('.map-stage');
+  if (!stage) return;
+  if (document.fullscreenElement === stage) {          // let :fullscreen CSS drive it
+    stage.style.width = stage.style.height = stage.style.transform = '';
+    return;
+  }
+  if (!view.classList.contains('active')) return;
+  const cw = view.clientWidth, ch = view.clientHeight;
+  if (!cw || !ch) return;
+  const W = (mapMeta && mapMeta.width) || 640;
+  const H = (mapMeta && mapMeta.height) || 360;
+  const scaleFlat = Math.min(cw / W, ch / H);          // upright
+  const scaleRot  = Math.min(cw / H, ch / W);          // rotated 90°
+  const rotate = scaleRot > scaleFlat;
+  const scale = rotate ? scaleRot : scaleFlat;
+  stage.style.width = (W * scale) + 'px';
+  stage.style.height = (H * scale) + 'px';
+  stage.style.transform = 'translate(-50%, -50%)' + (rotate ? ' rotate(90deg)' : '');
+}
+
 function renderMap() {
   if (currentView !== 'map') return;
+  layoutMapStage();
   if (!mapMeta) return;
   drawBakedRoutePolylines();
   drawBakedBusMarkers();
 }
+let mapResizeRaf = 0;
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(mapResizeRaf);
+  mapResizeRaf = requestAnimationFrame(layoutMapStage);
+});
 
 /* ==== render: buses (vertical columns) ==== */
 function renderBuses() {
@@ -3469,6 +3497,7 @@ document.addEventListener('fullscreenchange', () => {
   const isFs = !!document.fullscreenElement;
   icon.className = isFs ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
   btn.title = isFs ? 'Exit fullscreen' : 'Toggle fullscreen';
+  setTimeout(() => { layoutMapStage(); renderMap(); }, 60);
 });
 
 document.getElementById('mapRefreshBtn')?.addEventListener('click', async () => {
