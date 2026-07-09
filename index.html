@@ -1473,6 +1473,21 @@
   body.is-mobile .m-near-tag { flex: 0 0 auto; margin-left: 0.5rem; width: 28px; height: 28px; border-radius: 50%;
     background: rgba(42,157,143,0.15); color: var(--low); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
 
+  /* Nearest-stop direction strip attached to the top of a stop card */
+  body.is-mobile .m-near-seg {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem;
+    background: linear-gradient(180deg, rgba(0,61,124,0.08), rgba(0,61,124,0.03));
+    border-bottom: 1px solid var(--border);
+  }
+  body.is-mobile .m-near-seg .m-near-compass { width: 38px; height: 38px; font-size: 1rem; }
+  body.is-mobile .m-near-seg .m-near-label { flex: 1; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.06em; font-weight: 800; color: var(--primary); }
+  body.is-mobile .m-near-seg .m-near-dist { flex: 0 0 auto; text-align: right; color: var(--accent); font-weight: 800; }
+  body.is-mobile .m-near-seg .m-near-dist .m-near-distval { font-size: 1.15rem; font-feature-settings: 'tnum'; }
+  body.is-mobile .m-near-seg .m-near-dist small { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
+  body.is-mobile .m-near-seg.m-here { background: linear-gradient(180deg, rgba(42,157,143,0.12), rgba(42,157,143,0.04)); }
+  body.is-mobile .m-near-seg.m-here .m-near-label { color: var(--low); }
+
   /* Stop picker — fullscreen grid of stop cards (desktop + mobile) */
   #stopPicker { position: fixed; inset: 0; z-index: 95000; display: none; }
   #stopPicker.open { display: flex; }
@@ -2433,6 +2448,7 @@ window.addEventListener('appinstalled', () => {
 /* ===== Nearest stop (geolocation + compass) ===== */
 let geoNearestList = [];    // up to 2 × { stop, dist (m), bearing (deg from north) }
 let geoSig = '';            // signature of the rendered list (stops + here-state)
+let geoStopsSig = '';       // just the stop names — changes trigger a data re-fetch
 let geoHeading = null;      // device compass heading (deg) or null
 let geoState = 'idle';      // idle | on | denied | unsupported
 let geoWatchId = null;
@@ -2474,9 +2490,13 @@ function startGeo() {
       // Re-render only when the card set OR a here/away state changes; otherwise
       // just update distances + arrows in place (keeps animations smooth).
       const sig = list.map((n) => n.stop + (n.dist < HERE_M ? '!' : '')).join(',');
+      const stopsSig = list.map((n) => n.stop).join(',');
       if (sig !== geoSig) {
-        geoSig = sig;
+        const stopsChanged = stopsSig !== geoStopsSig;
+        geoSig = sig; geoStopsSig = stopsSig;
         if (IS_MOBILE() && currentView === 'shuttle') renderShuttlesMobile(); else updateNearestLive();
+        // A new nearby stop appeared → pull its live arrivals into the fetch set.
+        if (IS_MOBILE() && stopsChanged) refresh();
       } else {
         updateNearestLive();
       }
@@ -2518,32 +2538,22 @@ async function enableCompass() {
     }
   } catch (e) {}
 }
-function oneNearCard(n, i) {
-  const tracked = getStops().includes(n.stop);
+// A compact "direction to this stop" strip that sits at the top of a stop card
+// (compass arrow + distance). Live arrow/distance are updated by updateNearestLive.
+function mNearSegHtml(n, idx) {
   const here = n.dist < HERE_M;
-  const label = i === 0 ? 'Nearest stop' : 'Also nearby';
+  const label = idx === 0 ? 'Nearest stop' : 'Also nearby';
   const compass = here
-    ? `<div class="m-near-compass m-here-pin"><i class="fa-solid fa-person-walking"></i></div>`
+    ? `<span class="m-near-compass m-here-pin"><i class="fa-solid fa-person-walking"></i></span>`
     : `<button class="m-near-compass" data-compass aria-label="Point to ${escapeHtml(n.stop)}"><i class="fa-solid fa-arrow-up m-near-arrow"></i></button>`;
   const dist = here
     ? `<span class="m-near-here"><i class="fa-solid fa-location-dot"></i> You're here</span>`
-    : `<span class="m-near-distval">–</span><small>m</small>`;
-  return `<div class="m-near ${here ? 'm-here' : ''}" data-idx="${i}" data-near-stop="${escapeHtml(n.stop)}">
+    : `<span class="m-near-dist"><span class="m-near-distval">–</span><small>m</small></span>`;
+  return `<div class="m-near-seg ${here ? 'm-here' : ''}" data-idx="${idx}" data-near-stop="${escapeHtml(n.stop)}">
     ${compass}
-    <div class="m-near-info"><div class="m-near-label">${label}</div><div class="m-near-name">${escapeHtml(n.stop)}</div></div>
-    <div class="m-near-dist">${dist}</div>
-    ${tracked
-      ? '<span class="m-near-tag"><i class="fa-solid fa-check"></i></span>'
-      : `<button class="m-near-add" data-near-add="${escapeHtml(n.stop)}">Track</button>`}
+    <span class="m-near-label">${label}</span>
+    ${dist}
   </div>`;
-}
-function nearestCardHtml() {
-  if (!IS_MOBILE()) return '';
-  if (!geoNearestList.length) {
-    if (geoState === 'denied') return `<button class="m-near m-near-off" data-geo-enable><i class="fa-solid fa-location-dot"></i> Enable location for your nearest stops</button>`;
-    return '';
-  }
-  return geoNearestList.map(oneNearCard).join('');
 }
 function animateNumber(el, to) {
   const cur = parseInt(el.textContent, 10);
@@ -2582,13 +2592,13 @@ function updateNearestArrow(card, n) {
   if (c) c.classList.toggle('m-compass-live', geoHeading != null);
 }
 function updateAllArrows() {
-  document.querySelectorAll('#depBoard .m-near[data-idx]').forEach((card) => {
+  document.querySelectorAll('#depBoard .m-near-seg[data-idx]').forEach((card) => {
     const n = geoNearestList[+card.dataset.idx];
     if (n) updateNearestArrow(card, n);
   });
 }
 function updateNearestLive() {
-  document.querySelectorAll('#depBoard .m-near[data-idx]').forEach((card) => {
+  document.querySelectorAll('#depBoard .m-near-seg[data-idx]').forEach((card) => {
     const n = geoNearestList[+card.dataset.idx];
     if (!n) return;
     if (n.dist >= HERE_M) {
@@ -2715,25 +2725,32 @@ function mDepRow(s, fetched, kind) {
       ${then}
     </div></div>`;
 }
-// One mobile stop card. data-stop carries the stop; showDel adds the trash button.
-function mCardShell(stopName, title, termInline, sub, rowsHtml, showDel, kindCls) {
+// One mobile stop card. data-stop carries the stop; showDel adds the trash button;
+// topSeg is an optional strip (nearest-stop direction) rendered above the head.
+function mCardShell(stopName, title, termInline, sub, rowsHtml, showDel, kindCls, topSeg) {
   const full = stopFullName(stopName);
   const nm = `<div class="m-sc-id"><div class="m-sc-nm">${escapeHtml(title)}${termInline}</div>${full ? `<div class="m-sc-full">${escapeHtml(full)}</div>` : ''}</div>`;
   const del = showDel
     ? `<button class="m-sc-del" data-remove-card="${escapeHtml(stopName)}" aria-label="Remove ${escapeHtml(stopName)}"><i class="fa-solid fa-trash-can"></i></button>`
     : '';
   return `<div class="m-stopcard ${kindCls}" data-stop="${escapeHtml(stopName)}">
+    ${topSeg || ''}
     <div class="m-sc-head">${nm}<div class="m-sc-sub">${escapeHtml(sub)}</div>${del}</div>
     ${rowsHtml}</div>`;
 }
-function mStopCardHtml(stopName) {
+// nearSeg: optional direction strip (for the nearest stop). tracked=false → a
+// nearby-but-not-saved stop: no delete button, no remove-confirm flow.
+function mStopCardHtml(stopName, nearSeg, tracked) {
+  nearSeg = nearSeg || '';
+  tracked = tracked !== false;
   const termInline = TERMINAL_STOPS.has(stopName)
     ? ' <i class="fa-solid fa-flag-checkered" style="font-size:0.65em;color:var(--text-muted)"></i>' : '';
   const svcMeta = (n) => `${n} service${n === 1 ? '' : 's'}`;
 
   // "Remove?" confirmation — collapsed to the title row + Yes/No (auto-reverts after 5s).
-  if (pendingRemove === stopName) {
+  if (tracked && pendingRemove === stopName) {
     return `<div class="m-stopcard m-confirm" data-stop="${escapeHtml(stopName)}">
+      ${nearSeg}
       <div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${termInline}</div></div>
       <div class="m-confirm-row"><span class="m-confirm-q">Remove this stop?</span>
         <button class="m-cf m-cf-no" data-confirm-no="${escapeHtml(stopName)}">No</button>
@@ -2745,7 +2762,7 @@ function mStopCardHtml(stopName) {
   const fetched = shuttleFetchedAt[stopName] || Date.now();
   if (!data) {
     // While loading: no delete button (it's only shown once details are in).
-    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}"><div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${termInline}</div></div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
+    return `<div class="m-stopcard" data-stop="${escapeHtml(stopName)}">${nearSeg}<div class="m-sc-head"><div class="m-sc-nm">${escapeHtml(stopName)}${termInline}</div></div>${mSkelRow()}${mSkelRow()}${mSkelRow()}</div>`;
   }
   const rawShuttles = (data.ShuttleServiceResult || {}).shuttles || [];
   const noneRow = (txt) => `<div class="empty" style="padding:1rem 0.95rem;">${txt}</div>`;
@@ -2755,10 +2772,10 @@ function mStopCardHtml(stopName) {
   if (split) {
     const depRows = split.departures.length
       ? split.departures.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No departures right now.');
-    let html = mCardShell(stopName, stopName + ' Departure', termInline, svcMeta(split.departures.length), depRows, true, '');
+    let html = mCardShell(stopName, stopName + ' Departure', termInline, svcMeta(split.departures.length), depRows, tracked, '', nearSeg);
     if (split.arrivals.length) {
       const arrRows = split.arrivals.map((s) => mDepRow(s, fetched, 'arrival')).join('');
-      html += mCardShell(stopName, stopName + ' Arrival', termInline, svcMeta(split.arrivals.length), arrRows, false, 'm-kind-arrival');
+      html += mCardShell(stopName, stopName + ' Arrival', termInline, svcMeta(split.arrivals.length), arrRows, false, 'm-kind-arrival', '');
     }
     return html;
   }
@@ -2766,18 +2783,38 @@ function mStopCardHtml(stopName) {
   const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
   const rows = shuttles.length
     ? shuttles.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No services running here right now.');
-  return mCardShell(stopName, stopName, termInline, svcMeta(shuttles.length), rows, true, '');
+  return mCardShell(stopName, stopName, termInline, svcMeta(shuttles.length), rows, tracked, '', nearSeg);
 }
 function renderShuttlesMobile() {
   const board = document.getElementById('depBoard');
-  const stops = getStops();
-  board.innerHTML =
-    installCardHtml() +
-    nearestCardHtml() +
-    mAddBtnHtml() +
-    (stops.length
-      ? stops.map(mStopCardHtml).join('')
-      : '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>');
+  const tracked = getStops();
+  const trackedSet = new Set(tracked);
+  // Map stop → { n, idx } for the nearby list (idx drives the live-arrow update).
+  const nearByStop = {};
+  geoNearestList.forEach((n, i) => { nearByStop[n.stop] = { n, idx: i }; });
+  const nearNotTracked = geoNearestList.filter((n) => !trackedSet.has(n.stop));
+
+  let html = installCardHtml();
+  // Prompt to enable location when denied and we have nothing to show yet.
+  if (!geoNearestList.length && geoState === 'denied') {
+    html += `<button class="m-near m-near-off" data-geo-enable><i class="fa-solid fa-location-dot"></i> Enable location for your nearest stops</button>`;
+  }
+  // Nearby (not-yet-tracked) stops become full cards at the very top, each with
+  // a direction strip — no need to "Track" them.
+  nearNotTracked.forEach((n) => {
+    html += mStopCardHtml(n.stop, mNearSegHtml(n, nearByStop[n.stop].idx), false);
+  });
+  html += mAddBtnHtml();
+  // Tracked stops (a tracked stop that's also nearby gets the direction strip).
+  if (tracked.length) {
+    tracked.forEach((stopName) => {
+      const hit = nearByStop[stopName];
+      html += mStopCardHtml(stopName, hit ? mNearSegHtml(hit.n, hit.idx) : '', true);
+    });
+  } else if (!nearNotTracked.length) {
+    html += '<div class="empty" style="padding:2rem 0.95rem;">Add a stop to see live arrivals.</div>';
+  }
+  board.innerHTML = html;
   updateNearestLive();
 }
 function renderBusesMobile() {
@@ -3205,10 +3242,24 @@ async function ensureTickers(force) {
   finally { tickersLoading = false; }
 }
 
+// Nearby stops (from geolocation) that aren't already tracked. Shown as extra
+// cards at the top of the mobile Stops view and fetched alongside tracked stops,
+// but NOT counted toward MAX_STOPS.
+function getNearStops() {
+  const tracked = new Set(getStops());
+  return geoNearestList.map((n) => n.stop).filter((s) => !tracked.has(s));
+}
+// Every stop whose live data we fetch: tracked ∪ nearby (deduped, tracked first).
+function getFetchStops() {
+  const out = [...getStops()];
+  for (const s of getNearStops()) if (!out.includes(s)) out.push(s);
+  return out;
+}
+
 async function refresh() {
   lastRefreshAt = Date.now();
-  const stops = getStops();
-  // Drop cached data for stops no longer selected
+  const stops = getFetchStops();   // tracked + nearby (nearby aren't in MAX_STOPS)
+  // Drop cached data for stops we no longer track or that aren't nearby anymore
   for (const k of Object.keys(lastShuttles)) {
     if (!stops.includes(k)) { delete lastShuttles[k]; delete shuttleFetchedAt[k]; }
   }
