@@ -1556,19 +1556,35 @@
   body.is-mobile .m-sc-full { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-top: 0.1rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.is-mobile .m-sc-sub { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; flex: 0 0 auto; }
-  body.is-mobile .m-deprow { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.95rem; }
-  body.is-mobile .m-deprow + .m-deprow { border-top: 1px solid #f0f3f7; }
+  body.is-mobile .m-deprow { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.95rem; }
+  body.is-mobile .m-deprow + .m-deprow,
+  body.is-mobile .m-seq + .m-deprow { border-top: 1px solid #f0f3f7; }
+  body.is-mobile .m-deprow-x { cursor: pointer; }
+  body.is-mobile .m-deprow-x:active { background: #f7f9fc; }
+  body.is-mobile .m-deprow.m-open { background: #f5f8fc; }
   body.is-mobile .m-mid { flex: 1; min-width: 0; }
   body.is-mobile .m-dir { font-size: 0.92rem; font-weight: 700; }
   body.is-mobile .m-via { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  body.is-mobile .m-eta { text-align: right; flex: 0 0 auto; line-height: 1.05; }
-  body.is-mobile .m-eta .dep-eta { font-size: 1.6rem; font-weight: 800; color: var(--accent); font-feature-settings: 'tnum'; }
+  body.is-mobile .m-via-tri { font-size: 0.7em; color: var(--primary); margin-right: 0.35rem; transition: transform 0.2s ease; }
+  body.is-mobile .m-deprow.m-open .m-via-tri { transform: rotate(90deg); }
+  /* Two equal-priority ETA cells (next | following), minutes only, no labels. */
+  body.is-mobile .m-eta { flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; line-height: 1; }
+  body.is-mobile .m-eta-cell { display: flex; align-items: baseline; gap: 0.1rem; }
+  body.is-mobile .m-eta-sep { align-self: stretch; width: 1px; background: var(--border); margin: 0.1rem 0; }
+  body.is-mobile .m-eta .dep-eta { font-size: 1.4rem; font-weight: 800; color: var(--accent); font-feature-settings: 'tnum'; }
   body.is-mobile .m-eta .dep-eta.critical { color: var(--high); }
   body.is-mobile .m-eta .dep-eta.soon { color: var(--med); }
   body.is-mobile .m-eta .dep-eta.arrival { color: var(--primary); }
-  body.is-mobile .m-eta .dep-eta-unit { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); margin-left: 0.1rem; }
-  body.is-mobile .m-eta .m-then { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.15rem; }
+  body.is-mobile .m-eta .dep-eta-unit { font-size: 0.6rem; font-weight: 700; color: var(--text-muted); margin-left: 0.05rem; }
   body.is-mobile .m-eta .m-eta-na { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+  /* Expanded stop-sequence panel */
+  body.is-mobile .m-seq { overflow: hidden; background: #f5f8fc; animation: mSeqIn 0.24s ease-out; }
+  body.is-mobile .m-seq-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.15rem; padding: 0.65rem 0.95rem 0.75rem; }
+  body.is-mobile .m-seq-stop { font-size: 0.68rem; font-weight: 700; color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0.1rem 0.3rem; border-radius: 5px; white-space: nowrap; }
+  body.is-mobile .m-seq-stop.cur { background: var(--primary); color: #fff; }
+  body.is-mobile .m-seq-arw { font-size: 0.6rem; color: #c2ccd8; }
+  @keyframes mSeqIn { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 300px; } }
   /* Arrival card (terminal "<Stop> Arrival") — muted, secondary to the departure card. */
   body.is-mobile .m-kind-arrival { background: #fafbfd; }
   body.is-mobile .m-kind-arrival .m-sc-head { background: #f4f6fa; }
@@ -1891,6 +1907,16 @@ const ROUTE_DESCRIPTION = {
   'R1': 'Kent Vale → UTown → CLB → BIZ → PGP',
   'R2': 'PGP → BIZ → IT → UTown → Kent Vale',
 };
+// Short at-a-glance route label (mobile rows, collapsed). The full stop sequence
+// is shown on tap. Falls back to the text before "·" then the raw description.
+const ROUTE_SHORT = {
+  'A1': 'KR Terminal loop', 'A2': 'KR Terminal loop (rev.)',
+  'D1': 'COM3 loop', 'D2': 'COM3 loop',
+  'K':  'PGP · Kent Vale loop', 'P': 'Kent Vale ↔ BTC',
+  'R1': 'Kent Vale → PGP', 'R2': 'PGP → Kent Vale',
+};
+const routeShort = (disp) =>
+  ROUTE_SHORT[disp] || (ROUTE_DESCRIPTION[disp] || '').split('·')[0].trim() || 'Public bus';
 // Human-readable stop names. "-OPP" codes derive as "Opp <base>" via stopFullName().
 // NOTE: best-effort NUS names — confirm/correct any that are wrong.
 const STOP_NAMES = {
@@ -2673,6 +2699,17 @@ function pickerToggle(stop) {
   resetPickerIdle();
 }
 
+// Expanded bus row (shows the full stop sequence). One at a time; auto-collapses
+// after 15s. State (not DOM) survives the 30s refresh re-render.
+let expandedRow = null, expandTimer = null;
+function toggleRowExpand(key) {
+  clearTimeout(expandTimer);
+  if (expandedRow === key) { expandedRow = null; renderShuttlesMobile(); return; }
+  expandedRow = key;
+  renderShuttlesMobile();
+  expandTimer = setTimeout(() => { expandedRow = null; renderShuttlesMobile(); }, 15000);
+}
+
 // Per-card delete confirmation. Only one card can be in "Remove?" state at a time;
 // it auto-reverts after 5s of no choice. State lives in JS (not the DOM) so the
 // 30s data refresh re-render preserves it.
@@ -2700,30 +2737,47 @@ function confirmRemove(stop) {
   renderShuttles();
   refresh();
 }
-function mDepRow(s, fetched, kind) {
+// One ETA cell — same formatting for the next and the following bus (minutes only).
+function mEtaCell(eta, fetched, isArr, route) {
+  const sec = Math.max(0, eta.eta_s);
+  const crit = isArr ? 'arrival' : etaCriticality(sec, route);
+  const critRoute = isArr ? '__arrival__' : route;
+  return `<span class="m-eta-cell"><span class="dep-eta ${crit}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(critRoute)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span></span>`;
+}
+// Full stop sequence for a route, current stop highlighted. Shown when expanded.
+function mSeqPanelHtml(disp, stopName) {
+  const seq = ROUTE_SEQUENCE[disp] || [];
+  if (seq.length < 2) return '';
+  const chips = seq.map((st) =>
+    `<span class="m-seq-stop ${st === stopName ? 'cur' : ''}">${escapeHtml(st)}</span>`
+  ).join('<i class="fa-solid fa-angle-right m-seq-arw"></i>');
+  return `<div class="m-seq"><div class="m-seq-inner">${chips}</div></div>`;
+}
+function mDepRow(s, fetched, kind, stopName) {
   const route = s.name || '?';
   const disp = displayRouteName(route);
   const etas = s._etas || [];
   const next = etas[0];
   const following = etas[1];
-  const desc = ROUTE_DESCRIPTION[disp] || (isPublicRoute(route) ? 'Public bus' : '');
   const isArr = kind === 'arrival';
+  // Collapsed: short route label + a caret when a full sequence is available.
+  const expandable = (ROUTE_SEQUENCE[disp] || []).length >= 2;
+  const key = stopName + '|' + route + '|' + (isArr ? 'a' : 'd');
+  const isExp = expandable && expandedRow === key;
+  const caret = expandable ? `<i class="fa-solid fa-caret-right m-via-tri ${isExp ? 'open' : ''}"></i>` : '';
+  const mid = `<div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${caret}${escapeHtml(routeShort(disp))}</div></div>`;
+  const rowAttrs = expandable ? ` role="button" data-expand="${escapeHtml(key)}"` : '';
+  const seqPanel = isExp ? mSeqPanelHtml(disp, stopName) : '';
+
+  let etaHtml;
   if (!next || typeof next.eta_s !== 'number') {
-    return `<div class="m-deprow">${mRouteBadge(route)}
-      <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
-      <div class="m-eta"><span class="m-eta-na">No buses</span></div></div>`;
+    etaHtml = `<div class="m-eta"><span class="m-eta-na">No buses</span></div>`;
+  } else {
+    const secondCell = (following && typeof following.eta_s === 'number')
+      ? `<span class="m-eta-sep"></span>${mEtaCell(following, fetched, isArr, route)}` : '';
+    etaHtml = `<div class="m-eta">${mEtaCell(next, fetched, isArr, route)}${secondCell}</div>`;
   }
-  const sec = Math.max(0, next.eta_s);
-  const crit = isArr ? 'arrival' : etaCriticality(sec, route);
-  const critRoute = isArr ? '__arrival__' : route;
-  const then = (following && typeof following.eta_s === 'number')
-    ? `<div class="m-then">then ${etaLabel(Math.max(0, following.eta_s))}</div>` : '';
-  return `<div class="m-deprow">${mRouteBadge(route)}
-    <div class="m-mid"><div class="m-dir">${escapeHtml(disp)}</div><div class="m-via">${escapeHtml(desc)}</div></div>
-    <div class="m-eta">
-      <span class="dep-eta ${crit}" data-eta-s="${sec}" data-fetched="${fetched}" data-route="${escapeHtml(critRoute)}">${depEtaText(sec)}</span><span class="dep-eta-unit">${depEtaUnit(sec)}</span>
-      ${then}
-    </div></div>`;
+  return `<div class="m-deprow ${expandable ? 'm-deprow-x' : ''} ${isExp ? 'm-open' : ''}"${rowAttrs}>${mRouteBadge(route)}${mid}${etaHtml}</div>${seqPanel}`;
 }
 // One mobile stop card. data-stop carries the stop; showDel adds the trash button;
 // topSeg is an optional strip (nearest-stop direction) rendered above the head.
@@ -2771,10 +2825,10 @@ function mStopCardHtml(stopName, nearSeg, tracked) {
   const split = terminalSplit(stopName, rawShuttles);
   if (split) {
     const depRows = split.departures.length
-      ? split.departures.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No departures right now.');
+      ? split.departures.map((s) => mDepRow(s, fetched, 'departure', stopName)).join('') : noneRow('No departures right now.');
     let html = mCardShell(stopName, stopName + ' Departure', termInline, svcMeta(split.departures.length), depRows, tracked, '', nearSeg);
     if (split.arrivals.length) {
-      const arrRows = split.arrivals.map((s) => mDepRow(s, fetched, 'arrival')).join('');
+      const arrRows = split.arrivals.map((s) => mDepRow(s, fetched, 'arrival', stopName)).join('');
       html += mCardShell(stopName, stopName + ' Arrival', termInline, svcMeta(split.arrivals.length), arrRows, false, 'm-kind-arrival', '');
     }
     return html;
@@ -2782,7 +2836,7 @@ function mStopCardHtml(stopName, nearSeg, tracked) {
 
   const shuttles = consolidateShuttles(rawShuttles).sort(byEtaAsc);
   const rows = shuttles.length
-    ? shuttles.map((s) => mDepRow(s, fetched, 'departure')).join('') : noneRow('No services running here right now.');
+    ? shuttles.map((s) => mDepRow(s, fetched, 'departure', stopName)).join('') : noneRow('No services running here right now.');
   return mCardShell(stopName, stopName, termInline, svcMeta(shuttles.length), rows, tracked, '', nearSeg);
 }
 function renderShuttlesMobile() {
@@ -3485,6 +3539,8 @@ depBoardEl.addEventListener('click', (e) => {
   if (nearAdd) { tryAddStop(nearAdd.dataset.nearAdd); return; }
   if (e.target.closest('[data-geo-enable]')) { geoState = 'idle'; startGeo(); return; }
   if (e.target.closest('[data-compass]')) { enableCompass(); return; }
+  const exp = e.target.closest('[data-expand]');
+  if (exp) { toggleRowExpand(exp.dataset.expand); return; }
 });
 
 // Stop picker: card toggle + close (Esc / ✕ / Done / 15s idle).
