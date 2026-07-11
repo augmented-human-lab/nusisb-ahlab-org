@@ -1124,7 +1124,9 @@
      white square flush to the left edge, filling the card's full height. */
   .dep-card.dep-qr-card {
     background: linear-gradient(135deg, var(--primary), #00509e); color: #fff; border-color: transparent;
+    cursor: pointer;
   }
+  .dep-card.dep-qr-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,61,124,0.3); }
   .dep-qr-card .dep-qr-code { flex: 0 0 auto; align-self: stretch; width: auto; height: auto; aspect-ratio: 1 / 1;
     background: #fff; display: flex; align-items: center; justify-content: center; padding: calc(6px * var(--fit, 1)); }
   .dep-qr-card .dep-qr-code img, .dep-qr-card .dep-qr-code canvas {
@@ -1215,6 +1217,9 @@
     box-shadow: 0 0 0 3px rgba(217,70,82,0.08), var(--shadow);
   }
   .dep-card.no-data { opacity: 0.55; }
+  /* Zero-width, invisible full-size digit — keeps a no-data card the same height
+     as cards showing real ETAs (it carries the big ETA line-height). */
+  .dep-eta-ghost { visibility: hidden; display: inline-block; width: 0; }
   .dep-route-badge {
     flex: 0 0 auto;
     width: 64px;
@@ -1570,6 +1575,74 @@
   .picker-done:hover { background: var(--primary-strong, #00509e); }
   .picker-done:active { transform: translateY(1px); }
 
+  /* ── Mobile promo (clicked QR card) ─────────────────────────────────────── */
+  #mobilePromo { position: fixed; inset: 0; z-index: 96000; display: none; align-items: center; justify-content: center; }
+  #mobilePromo.open { display: flex; }
+  #mobilePromo .promo-backdrop { position: absolute; inset: 0; background: rgba(10,18,35,0.55);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .promo-panel {
+    position: relative; display: flex; align-items: center; gap: 3rem;
+    background: var(--bg); border-radius: 24px; padding: 2.5rem 3rem;
+    box-shadow: 0 30px 80px rgba(10,18,35,0.45); max-width: min(880px, 92vw); max-height: 92vh;
+    animation: pickerIn 0.2s ease-out;
+  }
+  .promo-x { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border: 0; border-radius: 50%;
+    background: var(--border); color: var(--text); cursor: pointer; font-size: 0.95rem; }
+  .promo-x:hover { background: #dbe1ea; }
+  /* phone mockup */
+  .promo-phone { flex: 0 0 auto; width: 250px; height: 520px; border-radius: 36px; background: #0b0e14;
+    padding: 9px; box-shadow: 0 22px 50px rgba(10,18,35,0.4); position: relative; }
+  .pp-notch { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 84px; height: 20px;
+    background: #0b0e14; border-radius: 0 0 12px 12px; z-index: 3; }
+  .pp-screen { width: 100%; height: 100%; border-radius: 28px; overflow: hidden; background: var(--bg);
+    display: flex; flex-direction: column; }
+  .pp-appbar { flex: 0 0 auto; background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+    color: #fff; font-size: 0.78rem; font-weight: 800; padding: 1.6rem 0.8rem 0.6rem; display: flex; align-items: center; gap: 0.35rem; }
+  .pp-appbar > i { color: var(--accent); }
+  .pp-live { margin-left: auto; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.58rem; font-weight: 600;
+    background: rgba(255,255,255,0.16); padding: 0.15rem 0.45rem; border-radius: 999px; }
+  .pp-live span { width: 5px; height: 5px; border-radius: 50%; background: #5ce08a; }
+  .pp-scroll { flex: 1; padding: 0.55rem 0.55rem 0; overflow: hidden; }
+  .pp-card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 0.55rem; overflow: hidden; }
+  .pp-near { display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.55rem;
+    background: linear-gradient(180deg, rgba(0,61,124,0.08), rgba(0,61,124,0.03)); border-bottom: 1px solid var(--border); }
+  .pp-compass { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+  .pp-compass i { transform: rotate(38deg); }
+  .pp-near b { flex: 1; font-size: 0.55rem; letter-spacing: 0.08em; color: var(--primary); }
+  .pp-near em { font-style: normal; font-size: 0.85rem; font-weight: 800; color: var(--accent); }
+  .pp-near em small { font-size: 0.55rem; color: var(--text-muted); margin-left: 1px; }
+  .pp-head { padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--border); }
+  .pp-head b { display: block; font-size: 0.8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pp-head small { font-size: 0.55rem; color: var(--text-muted); }
+  .pp-row { display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.55rem; }
+  .pp-row + .pp-row { border-top: 1px solid #f0f3f7; }
+  .pp-rb { width: 24px; height: 24px; border-radius: 7px; color: #fff; font-weight: 800; font-size: 0.62rem;
+    display: flex; align-items: center; justify-content: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pp-nm { flex: 1; font-size: 0.68rem; font-weight: 700; }
+  .pp-eta { display: flex; align-items: baseline; gap: 0.3rem; font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+  .pp-eta small { font-size: 0.45rem; color: var(--text-muted); }
+  .pp-eta i { align-self: stretch; width: 1px; background: var(--border); }
+  .pp-tabs { flex: 0 0 auto; display: flex; border-top: 1px solid var(--border); background: #fff; padding: 0.35rem 0 0.7rem; }
+  .pp-tabs span { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: 0.45rem; font-weight: 600; color: var(--text-muted); }
+  .pp-tabs span i { font-size: 0.8rem; }
+  .pp-tabs span.on { color: var(--primary); }
+  /* right column */
+  .promo-info { flex: 1; min-width: 0; }
+  .promo-info h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 1.3rem; }
+  .promo-feats { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+  .promo-feats li { display: flex; gap: 0.85rem; align-items: flex-start; }
+  .pf-ic { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; background: rgba(0,61,124,0.08); color: var(--primary); font-size: 1rem; }
+  .promo-feats b { display: block; font-size: 0.95rem; font-weight: 700; }
+  .promo-feats li > div > span { font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; }
+  .promo-qr { display: flex; align-items: center; gap: 1rem; margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--border); }
+  .promo-qr #promoQrCode { flex: 0 0 auto; background: #fff; padding: 7px; border-radius: 10px; box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center; }
+  .promo-qr #promoQrCode img, .promo-qr #promoQrCode canvas { display: block; width: 96px !important; height: 96px !important; }
+  .promo-qr > span { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); line-height: 1.5; }
+
   /* Per-card delete + "Remove?" confirmation */
   body.is-mobile .m-sc-del {
     flex: 0 0 auto; margin-left: 0.6rem; width: 30px; height: 30px; border: 0; border-radius: 9px;
@@ -1749,6 +1822,57 @@
     <div class="picker-foot">
       <span class="picker-hint"><i class="fa-regular fa-hand-pointer"></i> Tap a stop to add or remove it</span>
       <button class="picker-done" data-picker-close>Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile promo — full-screen pitch opened by clicking the "Going out?" QR card.
+     Phone mockup (dummy data) on the left, mobile-only features + QR on the right.
+     Dismiss via ✕ / Esc / backdrop, or auto-closes after 15s of no I/O activity. -->
+<div id="mobilePromo" aria-hidden="true">
+  <div class="promo-backdrop" data-promo-close></div>
+  <div class="promo-panel" role="dialog" aria-label="NUS ISB on your phone">
+    <button class="promo-x" data-promo-close aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    <div class="promo-phone" aria-hidden="true">
+      <div class="pp-notch"></div>
+      <div class="pp-screen">
+        <div class="pp-appbar"><i class="fa-solid fa-bus"></i> NUS ISB <span class="pp-live"><span></span>live</span></div>
+        <div class="pp-scroll">
+          <div class="pp-card">
+            <div class="pp-near"><span class="pp-compass"><i class="fa-solid fa-arrow-up"></i></span><b>NEAREST STOP</b><em>120<small>m</small></em></div>
+            <div class="pp-head"><b>COM3</b><small>School of Computing</small></div>
+            <div class="pp-row"><span class="pp-rb" style="background:#581c87">D2</span><span class="pp-nm">D2</span><span class="pp-eta">3<small>MIN</small><i></i>13<small>MIN</small></span></div>
+            <div class="pp-row"><span class="pp-rb" style="background:#a855f7">D1</span><span class="pp-nm">D1</span><span class="pp-eta">7<small>MIN</small><i></i>17<small>MIN</small></span></div>
+          </div>
+          <div class="pp-card">
+            <div class="pp-head"><b>BIZ2</b><small>School of Business</small></div>
+            <div class="pp-row"><span class="pp-rb" style="background:#d62828">A1</span><span class="pp-nm">A1</span><span class="pp-eta">5<small>MIN</small><i></i>15<small>MIN</small></span></div>
+          </div>
+        </div>
+        <div class="pp-tabs">
+          <span class="on"><i class="fa-solid fa-route"></i>Stops</span>
+          <span><i class="fa-solid fa-bus"></i>Buses</span>
+          <span><i class="fa-solid fa-map-location-dot"></i>Map</span>
+          <span><i class="fa-solid fa-bell"></i>Updates</span>
+        </div>
+      </div>
+    </div>
+    <div class="promo-info">
+      <h2>Better on your phone</h2>
+      <ul class="promo-feats">
+        <li><span class="pf-ic"><i class="fa-solid fa-location-dot"></i></span>
+          <div><b>Nearest stops, automatically</b><span>GPS shows your two closest stops with live arrivals — no searching.</span></div></li>
+        <li><span class="pf-ic"><i class="fa-solid fa-compass"></i></span>
+          <div><b>Compass directions</b><span>A live arrow points from you to the stop, counting down the metres.</span></div></li>
+        <li><span class="pf-ic"><i class="fa-solid fa-bus"></i></span>
+          <div><b>Buses that move</b><span>Watch each bus travel its route on an animated strip map.</span></div></li>
+        <li><span class="pf-ic"><i class="fa-solid fa-mobile-screen-button"></i></span>
+          <div><b>Installable app</b><span>Add to your home screen — launches full-screen, like a native app.</span></div></li>
+      </ul>
+      <div class="promo-qr">
+        <div id="promoQrCode"></div>
+        <span>Scan with your phone camera<br>to open the live tracker</span>
+      </div>
     </div>
   </div>
 </div>
@@ -2346,11 +2470,15 @@ function depCardHtml(shuttle, fetchedAt, kind) {
   const routeForCriticality = kind === 'arrival' ? '__arrival__' : route; // suppress urgency colour on arrival cards
 
   if (!next) {
+    // The invisible ghost digit carries the full-size ETA line-height so this
+    // card is exactly as tall as its neighbours with real times.
     return `<div class="dep-card no-data ${kindCls}">
       <div class="dep-route-badge ${cls}">${escapeHtml(display)}</div>
       <div class="dep-body">
         <div class="dep-times">
-          <div class="dep-time-col"><span class="dep-eta no-data">No upcoming arrivals</span></div>
+          <div class="dep-time-col"><span class="dep-time-label">Next</span>
+            <div class="dep-eta-wrap"><span class="dep-eta dep-eta-ghost">0</span><span class="dep-eta no-data">No upcoming arrivals</span></div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -2371,7 +2499,7 @@ function depCardHtml(shuttle, fetchedAt, kind) {
 // The "Best on your phone" QR card — a same-size .dep-card packed into the
 // shortest column so every column ends up a similar height.
 function depQrCardHtml() {
-  return `<div class="dep-card dep-qr-card">
+  return `<div class="dep-card dep-qr-card" role="button" tabindex="0" data-open-promo title="See what the mobile app can do">
     <div class="dep-qr-code" id="depQrCode"></div>
     <div class="dep-qr-tx">
       <div class="dep-qr-t"><i class="fa-solid fa-mobile-screen-button"></i> Going out?</div>
@@ -2781,6 +2909,34 @@ function pickerToggle(stop) {
   renderShuttles();
   refresh();
   resetPickerIdle();
+}
+
+/* ===== Mobile promo (opened from the QR card; 15s idle timeout) ===== */
+const PROMO_IDLE_MS = 15000;
+const PROMO_ACTIVITY = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel'];
+let promoIdleTimer = null;
+function resetPromoIdle() { clearTimeout(promoIdleTimer); promoIdleTimer = setTimeout(closeMobilePromo, PROMO_IDLE_MS); }
+function promoActivity() { resetPromoIdle(); }
+function openMobilePromo() {
+  const p = document.getElementById('mobilePromo');
+  if (!p || p.classList.contains('open')) return;
+  // Fresh QR each open (same URL logic as the card's QR — includes ?stops=…).
+  const host = document.getElementById('promoQrCode');
+  if (host && typeof QRCode !== 'undefined') {
+    host.innerHTML = '';
+    new QRCode(host, { text: location.origin + location.pathname + location.search,
+      width: 192, height: 192, colorDark: '#003d7c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  }
+  p.classList.add('open');
+  p.setAttribute('aria-hidden', 'false');
+  PROMO_ACTIVITY.forEach((ev) => document.addEventListener(ev, promoActivity, { passive: true }));
+  resetPromoIdle();
+}
+function closeMobilePromo() {
+  const p = document.getElementById('mobilePromo');
+  if (p) { p.classList.remove('open'); p.setAttribute('aria-hidden', 'true'); }
+  clearTimeout(promoIdleTimer); promoIdleTimer = null;
+  PROMO_ACTIVITY.forEach((ev) => document.removeEventListener(ev, promoActivity, { passive: true }));
 }
 
 // Expanded bus row (shows the full stop sequence). One at a time; auto-collapses
@@ -3725,9 +3881,24 @@ depBoardEl.addEventListener('click', (e) => {
   if (nearAdd) { tryAddStop(nearAdd.dataset.nearAdd); return; }
   if (e.target.closest('[data-geo-enable]')) { geoState = 'idle'; startGeo(); return; }
   if (e.target.closest('[data-compass]')) { enableCompass(); return; }
+  if (e.target.closest('[data-open-promo]')) { openMobilePromo(); return; }
   const exp = e.target.closest('[data-expand]');
   if (exp) { toggleRowExpand(exp.dataset.expand); return; }
 });
+// Keyboard access for the QR card (role=button, tabindex=0)
+depBoardEl.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-open-promo]')) {
+    e.preventDefault(); openMobilePromo();
+  }
+});
+
+// Mobile promo: close via ✕ / backdrop / Esc (idle timeout handled in open/close).
+(() => {
+  const promo = document.getElementById('mobilePromo');
+  if (!promo) return;
+  promo.addEventListener('click', (e) => { if (e.target.closest('[data-promo-close]')) closeMobilePromo(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && promo.classList.contains('open')) closeMobilePromo(); });
+})();
 
 // Stop picker: card toggle + close (Esc / ✕ / Done / 15s idle).
 (() => {
