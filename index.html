@@ -386,6 +386,36 @@
   }
   #authGate.has-error .gate-err { display: block; }
   #authGate .gate-foot { margin-top: 1.4rem; font-size: 0.78rem; color: var(--text-muted); }
+
+  /* Offline gate — full-screen, above everything (picker is 95000) */
+  #offlineGate {
+    position: fixed; inset: 0; z-index: 97000; display: none;
+    align-items: center; justify-content: center; padding: 1.5rem;
+    background: linear-gradient(135deg, #2b3442 0%, #1a2433 100%);
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+  #offlineGate.show { display: flex; }
+  #offlineGate .off-card { text-align: center; color: #fff; max-width: 22rem; }
+  #offlineGate .off-icon {
+    position: relative; width: 4.5rem; height: 4.5rem; margin: 0 auto 1.3rem; border-radius: 20px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    color: #8a93a1; font-size: 1.9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #offlineGate .off-slash {                     /* diagonal strike over the wifi icon */
+    position: absolute; width: 2.9rem; height: 3px; border-radius: 3px;
+    background: var(--high); transform: rotate(-45deg);
+    box-shadow: 0 0 0 3px #232c3a;
+  }
+  #offlineGate h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.5rem; }
+  #offlineGate p { font-size: 0.95rem; color: rgba(255,255,255,0.72); line-height: 1.55; }
+  #offlineGate .off-checking {
+    margin-top: 1.5rem; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.55);
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #offlineGate .off-checking i { animation: map-spin 1.6s linear infinite; }
+
   .eta-min { font-weight: 700; color: var(--accent); white-space: nowrap; }
   .eta-imminent { color: var(--high); }
 
@@ -1712,6 +1742,17 @@
       <span class="picker-hint"><i class="fa-regular fa-hand-pointer"></i> Tap a stop to add or remove it</span>
       <button class="picker-done" data-picker-close>Done</button>
     </div>
+  </div>
+</div>
+
+<!-- Offline gate — replaces the (misleading) loading skeletons while there's no
+     network. Shown/hidden by setOffline(); auto-recovers via online event + probe. -->
+<div id="offlineGate" aria-hidden="true" role="alertdialog" aria-label="No internet connection">
+  <div class="off-card">
+    <div class="off-icon"><i class="fa-solid fa-wifi"></i><span class="off-slash"></span></div>
+    <h2>No Internet</h2>
+    <p>Unable to retrieve bus schedules.<br>Please connect to the internet.</p>
+    <div class="off-checking"><i class="fa-solid fa-arrows-rotate"></i> Checking connection…</div>
   </div>
 </div>
 <script>
@@ -3396,7 +3437,46 @@ function getFetchStops() {
   return out;
 }
 
+/* ==== offline detection ====
+   Native watcher (online/offline events + navigator.onLine) for instant airplane-
+   mode detection, backed by a 5s probe fetch while offline — and after failed
+   refreshes — since navigator.onLine=true doesn't guarantee real internet
+   (e.g. Wi-Fi with no upstream). While offline, the full-screen gate replaces the
+   misleading loading skeletons and data polling is paused. */
+let isOffline = false, offlineProbeTimer = null, probeInFlight = false;
+const OFFLINE_PROBE_MS = 5000;
+function setOffline(off) {
+  if (off === isOffline) return;
+  isOffline = off;
+  const gate = document.getElementById('offlineGate');
+  if (gate) { gate.classList.toggle('show', off); gate.setAttribute('aria-hidden', off ? 'false' : 'true'); }
+  clearInterval(offlineProbeTimer); offlineProbeTimer = null;
+  if (off) {
+    offlineProbeTimer = setInterval(probeConnection, OFFLINE_PROBE_MS);
+  } else if (__appStarted) {
+    refresh();               // connection restored → reload everything right away
+  }
+}
+// A same-origin fetch with a unique query string: the cache-first service worker
+// misses (query differs), so this genuinely exercises the network.
+async function probeConnection() {
+  if (probeInFlight) return;
+  if (navigator.onLine === false) { setOffline(true); return; }   // definitely off
+  probeInFlight = true;
+  try {
+    await fetch('./manifest.json?probe=' + Date.now(), { cache: 'no-store' });
+    setOffline(false);
+  } catch (e) {
+    setOffline(true);
+  } finally {
+    probeInFlight = false;
+  }
+}
+window.addEventListener('offline', () => setOffline(true));
+window.addEventListener('online', () => probeConnection());
+
 async function refresh() {
+  if (isOffline) return;           // gate is up; probe loop will restart us
   lastRefreshAt = Date.now();
   const stops = getFetchStops();   // tracked + nearby (nearby aren't in MAX_STOPS)
   // Drop cached data for stops we no longer track or that aren't nearby anymore
@@ -3425,7 +3505,10 @@ async function refreshBootstrap(stops) {
     if (b.announcements) lastAnnouncements = b.announcements;
     const t = b.activeBus && b.activeBus.ActiveBusResult && b.activeBus.ActiveBusResult.TimeStamp;
     if (t) latestTs = t;
-  } catch (e) { console.warn('bootstrap', e.message); }
+  } catch (e) {
+    console.warn('bootstrap', e.message);
+    probeConnection();   // total failure may mean no internet despite onLine=true
+  }
 }
 
 // Dev path: the local Node server has no bootstrap endpoint, so call each
@@ -3441,17 +3524,19 @@ async function refreshIndividual(stops) {
     ['/api/BusPositions',  (d) => lastBusPositions = d],
     ['/api/StopRoutes',    (d) => lastStopRoutes = d],
   ];
-  let ts = null;
+  let ts = null, anyOk = false;
   await Promise.all(tasks.map(async ([url, save]) => {
     try {
       const data = await loadJSON(apiUrl(url));
       save(data);
+      anyOk = true;
       const k = data && Object.keys(data)[0];
       const t = data && k && data[k] && data[k].TimeStamp;
       if (t && (!ts || new Date(t) > new Date(ts))) ts = t;
     } catch (e) { console.warn(url, e.message); }
   }));
   if (ts) latestTs = ts;
+  if (!anyOk) probeConnection();   // every endpoint failed → suspect no internet
 }
 async function loadConfig() {
   // Production (GitHub Pages → Apps Script) has no /api/config and is always prod,
@@ -3678,6 +3763,10 @@ function startApp() {
   setInterval(tickShuttleTimes, 1000);
   setInterval(tickFetchWedge, 500);
 }
+
+// Boot: if the device is already offline, raise the gate immediately (it sits
+// above the sign-in gate too) instead of letting skeletons spin pointlessly.
+if (navigator.onLine === false) setOffline(true);
 
 renderRouteToggles();
 document.getElementById('routeToggles')?.addEventListener('click', (e) => {
