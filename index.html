@@ -1714,6 +1714,15 @@
   body.is-mobile .m-rb-t { font-weight: 800; font-size: 0.95rem; line-height: 1.1; }
   body.is-mobile .m-rb-d { font-size: 0.68rem; opacity: 0.92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.is-mobile .m-rb-n { margin-left: auto; flex: 0 0 auto; font-size: 0.72rem; font-weight: 700; background: rgba(0,0,0,0.18); padding: 0.18rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+  /* Route head is tappable: collapsed it shows just the short loop name; open it
+     reveals a multi-row panel with the full description + stop sequence chips. */
+  body.is-mobile .m-rb-head[data-toggle-route] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  body.is-mobile .m-rb-x { flex: 0 0 auto; font-size: 0.7rem; opacity: 0.85; transition: transform 0.2s ease; }
+  body.is-mobile .m-routeblk.open .m-rb-x { transform: rotate(180deg); }
+  body.is-mobile .m-rb-full { display: none; background: #f5f8fc; border-bottom: 1px solid #e8edf4; padding: 0.6rem 0.85rem 0.7rem; }
+  body.is-mobile .m-routeblk.open .m-rb-full { display: block; animation: mSeqIn 0.24s ease-out; overflow: hidden; }
+  body.is-mobile .m-rb-fulldesc { font-size: 0.76rem; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 0.45rem; }
+  body.is-mobile .m-rb-seq { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.15rem; }
   body.is-mobile .m-busrow { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem; }
   body.is-mobile .m-busrow + .m-busrow { border-top: 1px solid #f0f3f7; }
   body.is-mobile .m-plate { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
@@ -1725,26 +1734,37 @@
   body.is-mobile .m-st.stopped { color: #8a93a1; } body.is-mobile .m-st.stopped .m-d2 { background: #9aa3b0; }
   body.is-mobile .m-et { flex: 0 0 auto; min-width: 2.4rem; text-align: right; font-size: 0.92rem; font-weight: 800; color: var(--accent); font-feature-settings: 'tnum'; }
 
-  /* Animated per-bus strip map: bus pinned at centre, track of stops scrolls left */
-  body.is-mobile .m-busrow2 { position: relative; height: 76px; overflow: hidden; }
+  /* Animated per-bus strip map: bus pinned at centre, track of stops scrolls left.
+     Vertical layout (row 100px, line at 44px): ETA chip above the line, bus icon
+     on it, plate right under the icon, and stop names in a band BELOW the plate
+     zone — so a name never collides with the bus number while its dot passes
+     under the bus. Close-together stops drop their name to a second, lower lane
+     (.nm2). Rows persist across data refreshes; position corrections glide via
+     the `left` transition instead of tearing the strip down. */
+  body.is-mobile .m-busrow2 { position: relative; height: 102px; overflow: hidden; }
   body.is-mobile .m-busrow2 + .m-busrow2 { border-top: 1px solid #f0f3f7; }
   body.is-mobile .m-strip-track { position: absolute; inset: 0; will-change: transform; }
-  body.is-mobile .m-strip-line { position: absolute; left: -3000px; right: -3000px; top: 42px; height: 3px; border-radius: 3px;
+  body.is-mobile .m-strip-line { position: absolute; left: -3000px; right: -3000px; top: 44px; height: 3px; border-radius: 3px;
     background: repeating-linear-gradient(90deg, #d5dde8 0 11px, #eef2f7 11px 22px); }
-  body.is-mobile .m-node { position: absolute; top: 42px; left: calc(50% + var(--x)); transform: translate(-50%, -50%); }
+  body.is-mobile .m-node { position: absolute; top: 44px; left: calc(50% + var(--x)); transform: translate(-50%, -50%);
+    transition: left 1.6s ease; animation: mNodeIn 0.35s ease-out; }
+  @keyframes mNodeIn { from { opacity: 0; } }
   body.is-mobile .m-node-dot { display: block; width: 9px; height: 9px; border-radius: 50%; background: #fff;
     border: 2px solid #9fb0c4; box-shadow: 0 0 0 2px #fff; }
-  body.is-mobile .m-node-nm { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); white-space: nowrap;
-    font-size: 0.58rem; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  body.is-mobile .m-node-eta { position: absolute; bottom: 11px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  body.is-mobile .m-node-nm { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+    font-size: 0.58rem; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    transition: top 0.3s ease; }
+  body.is-mobile .m-node.nm2 .m-node-nm { top: 46px; }
+  body.is-mobile .m-node-eta { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); white-space: nowrap;
     font-size: 0.62rem; font-weight: 800; color: var(--accent); background: #fff; padding: 0 0.2rem; border-radius: 4px; }
   body.is-mobile .m-node.next .m-node-dot { border-color: var(--accent); }
   body.is-mobile .m-node.next .m-node-nm { color: var(--text); }
   body.is-mobile .m-node.past .m-node-dot { border-color: #c2ccd8; opacity: 0.7; }
   body.is-mobile .m-node.past .m-node-nm { opacity: 0.55; }
-  body.is-mobile .m-strip-empty { position: absolute; top: 42px; left: calc(50% + 46px); transform: translateY(-50%);
+  /* "Locating…" sits on the row, NOT the track — the track scrolls forever now. */
+  body.is-mobile .m-strip-empty { position: absolute; top: 44px; left: calc(50% + 46px); transform: translateY(-50%);
     font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
-  body.is-mobile .m-bus-marker { position: absolute; left: 50%; top: 42px; transform: translate(-50%, -50%); z-index: 4;
+  body.is-mobile .m-bus-marker { position: absolute; left: 50%; top: 44px; transform: translate(-50%, -50%); z-index: 4;
     display: flex; flex-direction: column; align-items: center; }
   body.is-mobile .m-bus-ic { width: 32px; height: 32px; border-radius: 50%; background: var(--bg); color: #fff;
     display: flex; align-items: center; justify-content: center; font-size: 0.9rem; border: 2.5px solid #fff; box-shadow: 0 2px 7px rgba(16,24,40,0.32); }
@@ -3134,9 +3154,15 @@ function renderShuttlesMobile() {
 }
 /* ===== Buses (mobile): animated strip-map per bus =====
    The bus icon is pinned at the centre; the track (with stop nodes) scrolls left
-   so the bus appears to move along its route. Node x = ETA·pps, and the track
-   translates at `pps` px/s, so each node reaches the bus exactly at its ETA. pps
-   scales with the bus's speed → a faster bus scrolls faster. */
+   so the bus appears to move along its route. Node x = ETA·pps (+ the track's
+   scroll offset), and the track translates at `pps` px/s, so each node reaches
+   the bus exactly at its ETA. pps scales with the bus's speed → a faster bus
+   scrolls faster.
+   Rows persist across data refreshes: the track's scroll offset (`track._x`)
+   accumulates forever, and each refresh only moves existing nodes to their
+   corrected positions (the CSS `left` transition glides them there), marks
+   passed stops `past` (they drift off with the track — no disappearing), and
+   appends newly-known stops off-screen right. */
 const STRIP_BASE_PPS = 1.5;   // px/s at the reference speed
 const STRIP_REF_KMH  = 18;    // "typical" shuttle speed
 const STRIP_PREV_GAP_S = 55;  // where the just-passed stop sits (left of centre)
@@ -3144,33 +3170,37 @@ function busStripPPS(kmh) {
   const f = Math.min(2.6, Math.max(0.5, (Number(kmh) || 0) / STRIP_REF_KMH));
   return STRIP_BASE_PPS * f;
 }
-function mBusStripHtml(b, route, sequence, byPlate) {
+// Approx rendered width of a stop-name label (0.58rem monospace ≈ 5.8px/char).
+const stripNmWidth = (stop) => stop.length * 5.8 + 8;
+function busUpcoming(b, route, sequence, byPlate) {
+  return (byPlate[b.vehplate || '?'] || [])
+    .filter((u) => u.route === route && sequence.includes(u.stop) && typeof u.eta_s === 'number')
+    .sort((a, c) => a.eta_s - c.eta_s);
+}
+function mStripNodeEl(stop, x, cls) {
+  const el = document.createElement('span');
+  el.className = 'm-node' + (cls ? ' ' + cls : '');
+  el.dataset.stop = stop;
+  el.style.setProperty('--x', x.toFixed(1) + 'px');
+  el.innerHTML = `<span class="m-node-dot"></span><span class="m-node-nm">${escapeHtml(stop)}</span>`;
+  return el;
+}
+// Add/update or remove the "NOW/DUE/xm" chip on a node. `due` = epoch ms or null.
+function setStripNodeEta(node, due) {
+  let chip = node.querySelector('.m-node-eta');
+  if (due == null) { if (chip) chip.remove(); return; }
+  if (!chip) { chip = document.createElement('em'); chip.className = 'm-node-eta'; node.prepend(chip); }
+  chip.dataset.due = due;
+  chip.textContent = shortEtaLabel(Math.max(0, (due - Date.now()) / 1000));
+}
+// Row shell only — stop nodes are reconciled in by updateBusStrip().
+function mBusStripHtml(b, bg) {
   const plate = b.vehplate || '?';
   const num = plate.replace(/^PD/i, '');
   const moving = speedStatus(b.speed).cls !== 'stopped';
-  const pps = busStripPPS(b.speed);
-  const bg = ROUTE_COLORS[route] || '#4b5563';
-  const upcoming = (byPlate[plate] || [])
-    .filter((u) => u.route === route && sequence.includes(u.stop) && typeof u.eta_s === 'number')
-    .sort((a, c) => a.eta_s - c.eta_s);
-
-  const nodes = [];
-  if (upcoming.length) {
-    const nextIdx = sequence.indexOf(upcoming[0].stop);   // one passed stop for context
-    if (nextIdx > 0) nodes.push({ stop: sequence[nextIdx - 1], eta: -STRIP_PREV_GAP_S, past: true });
-    upcoming.forEach((u, i) => nodes.push({ stop: u.stop, eta: Math.max(0, u.eta_s), next: i === 0 }));
-  }
-  const nodeHtml = nodes.map((nd) => {
-    const x = (nd.eta * pps).toFixed(1);
-    const eta = nd.next ? `<em class="m-node-eta" data-eta="${nd.eta}">${shortEtaLabel(nd.eta)}</em>` : '';
-    return `<span class="m-node ${nd.next ? 'next' : ''} ${nd.past ? 'past' : ''}" style="--x:${x}px">
-      ${eta}<span class="m-node-dot"></span><span class="m-node-nm">${escapeHtml(nd.stop)}</span></span>`;
-  }).join('') || '<span class="m-strip-empty">Locating…</span>';
-
-  return `<div class="m-busrow2">
-    <div class="m-strip-track" data-pps="${pps.toFixed(3)}">
+  return `<div class="m-busrow2" data-plate="${escapeHtml(plate)}">
+    <div class="m-strip-track" data-pps="${busStripPPS(b.speed).toFixed(3)}">
       <div class="m-strip-line"></div>
-      ${nodeHtml}
     </div>
     <div class="m-bus-marker ${moving ? 'moving' : 'stopped'}" style="--bg:${bg}">
       <span class="m-bus-ic"><i class="fa-solid fa-bus"></i></span>
@@ -3178,21 +3208,93 @@ function mBusStripHtml(b, route, sequence, byPlate) {
     </div>
   </div>`;
 }
+// Reconcile one bus row against fresh data without rebuilding its DOM.
+function updateBusStrip(row, b, route, sequence, byPlate) {
+  const track = row.querySelector('.m-strip-track');
+  const marker = row.querySelector('.m-bus-marker');
+  const pps = busStripPPS(b.speed);
+  track.dataset.pps = pps.toFixed(3);
+  const moving = speedStatus(b.speed).cls !== 'stopped';
+  marker.classList.toggle('moving', moving);
+  marker.classList.toggle('stopped', !moving);
+
+  const X = track._x || 0;                       // current scroll offset (px)
+  // ETAs were measured at the last refresh; discount time already elapsed.
+  const ageS = Math.max(0, (Date.now() - (lastRefreshAt || Date.now())) / 1000);
+  const upcoming = busUpcoming(b, route, sequence, byPlate);
+
+  const have = new Map();
+  track.querySelectorAll('.m-node').forEach((n) => have.set(n.dataset.stop, n));
+  let emptyEl = row.querySelector('.m-strip-empty');
+  if (!upcoming.length) {
+    if (!have.size && !emptyEl) row.insertAdjacentHTML('beforeend', '<span class="m-strip-empty">Locating…</span>');
+    return;
+  }
+  if (emptyEl) emptyEl.remove();
+
+  // Brand-new row: seed one just-passed stop left of the bus for context.
+  if (!have.size) {
+    const ni = sequence.indexOf(upcoming[0].stop);
+    const prev = ni > 0 ? sequence[ni - 1] : null;
+    if (prev && !upcoming.some((u) => u.stop === prev)) {
+      track.appendChild(mStripNodeEl(prev, -STRIP_PREV_GAP_S * pps + X, 'past'));
+    }
+  }
+  const seen = new Set();
+  upcoming.forEach((u, i) => {
+    const eta = Math.max(0, u.eta_s - ageS);
+    const x = eta * pps + X;
+    let n = have.get(u.stop);
+    if (!n) { n = mStripNodeEl(u.stop, x, i === 0 ? 'next' : ''); track.appendChild(n); }
+    else n.style.setProperty('--x', x.toFixed(1) + 'px');
+    n.classList.toggle('next', i === 0);
+    n.classList.remove('past');
+    setStripNodeEta(n, i === 0 ? Date.now() + eta * 1000 : null);
+    seen.add(u.stop);
+  });
+  // No longer upcoming → the bus passed it: keep the node, let it drift off left.
+  have.forEach((n, stop) => {
+    if (seen.has(stop)) return;
+    n.classList.add('past');
+    n.classList.remove('next');
+    setStripNodeEta(n, null);
+  });
+  // Cull nodes that have drifted well past the left edge.
+  const half = row.clientWidth / 2 || 220;
+  const nodes = [...track.querySelectorAll('.m-node')].map((n) => ({
+    n, stop: n.dataset.stop, x: parseFloat(n.style.getPropertyValue('--x')) || 0,
+  }));
+  for (const nd of nodes) if (nd.x - X < -(half + 90)) nd.n.remove();
+  // Two-lane name stagger: a label too close to the previous one in its lane
+  // drops to the lower lane so neighbouring stop names never overlap.
+  const alive = nodes.filter((nd) => nd.n.isConnected).sort((a, c) => a.x - c.x);
+  let end1 = -Infinity, end2 = -Infinity;
+  for (const nd of alive) {
+    const nm = nd.n.querySelector('.m-node-nm');
+    const w = ((nm && nm.offsetWidth) || stripNmWidth(nd.stop)) + 6;   // rendered width + breathing room
+    const lo = nd.x - w / 2;
+    if (lo >= end1) { nd.n.classList.remove('nm2'); end1 = nd.x + w / 2; }
+    else if (lo >= end2) { nd.n.classList.add('nm2'); end2 = nd.x + w / 2; }
+    else { nd.n.classList.remove('nm2'); end1 = nd.x + w / 2; }   // very dense — give up
+  }
+}
 // Drive all strips from one rAF loop; self-stops when the Buses view isn't shown.
-let busAnimRaf = 0, busAnimLabelAt = 0;
-function animateBusStrips() {
+let busAnimRaf = 0, busAnimLabelAt = 0, busAnimTs = 0;
+function animateBusStrips(ts) {
   busAnimRaf = 0;
-  if (!(IS_MOBILE() && currentView === 'buses')) return;
+  if (!(IS_MOBILE() && currentView === 'buses')) { busAnimTs = 0; return; }
   const tracks = document.querySelectorAll('#routeLines .m-strip-track');
-  if (!tracks.length) return;
-  const elapsed = Math.max(0, (Date.now() - (lastRefreshAt || Date.now())) / 1000);
+  if (!tracks.length) { busAnimTs = 0; return; }
+  const dt = busAnimTs ? Math.min(2, (ts - busAnimTs) / 1000) : 0;   // clamp tab-hidden gaps
+  busAnimTs = ts;
   const doLabels = Date.now() - busAnimLabelAt > 500;
   tracks.forEach((tr) => {
     const pps = parseFloat(tr.dataset.pps) || 1;
-    tr.style.transform = 'translateX(' + (-elapsed * pps).toFixed(1) + 'px)';
+    tr._x = (tr._x || 0) + pps * dt;
+    tr.style.transform = 'translateX(' + (-tr._x).toFixed(2) + 'px)';
     if (doLabels) {
       const el = tr.querySelector('.m-node-eta');
-      if (el) el.textContent = shortEtaLabel(Math.max(0, (parseFloat(el.dataset.eta) || 0) - elapsed));
+      if (el) el.textContent = shortEtaLabel(Math.max(0, ((parseFloat(el.dataset.due) || 0) - Date.now()) / 1000));
     }
   });
   if (doLabels) busAnimLabelAt = Date.now();
@@ -3200,27 +3302,79 @@ function animateBusStrips() {
 }
 function startBusAnim() { if (!busAnimRaf) busAnimRaf = requestAnimationFrame(animateBusStrips); }
 
+// Route heads the user has expanded (survives re-renders).
+const mExpandedRoutes = new Set();
+function mRouteSeqChips(route) {
+  const seq = ROUTE_SEQUENCE[route] || [];
+  if (seq.length < 2) return '';
+  const chips = seq.map((st) => `<span class="m-seq-stop">${escapeHtml(st)}</span>`)
+    .join('<i class="fa-solid fa-angle-right m-seq-arw"></i>');
+  return `<div class="m-rb-seq">${chips}</div>`;
+}
+function mRouteBlockHtml(g) {
+  const bg = ROUTE_COLORS[g.route] || '#4b5563';
+  const fg = g.route === 'A2' ? '#1a2433' : '#fff';
+  const open = mExpandedRoutes.has(g.route);
+  const rows = g.buses.map((b) => mBusStripHtml(b, bg)).join('');
+  return `<div class="m-routeblk ${open ? 'open' : ''}" data-route="${g.route}">
+    <div class="m-rb-head" style="background:${bg};color:${fg}" data-toggle-route="${g.route}" role="button" tabindex="0" aria-expanded="${open}">
+      <span class="m-rb">${escapeHtml(g.route)}</span>
+      <div class="m-rb-meta"><div class="m-rb-t">${escapeHtml(g.route)}</div><div class="m-rb-d">${escapeHtml(routeShort(g.route))}</div></div>
+      <span class="m-rb-n">${g.buses.length} bus${g.buses.length === 1 ? '' : 'es'}</span>
+      <i class="fa-solid fa-chevron-down m-rb-x"></i>
+    </div>
+    <div class="m-rb-full">
+      <div class="m-rb-fulldesc">${escapeHtml(ROUTE_DESCRIPTION[g.route] || '')}</div>
+      ${mRouteSeqChips(g.route)}
+    </div>
+    ${rows}</div>`;
+}
+
 function renderBusesMobile() {
   const c = document.getElementById('routeLines');
-  if (!lastActiveBus) { c.innerHTML = mSkelBlock() + mSkelBlock(); return; }
+  if (!lastActiveBus) { c.dataset.busSig = ''; c.innerHTML = mSkelBlock() + mSkelBlock(); return; }
   const allBuses = ((lastActiveBus.ActiveBusResult || {}).activebus) || [];
   const byPlate = (lastBusPositions && lastBusPositions.byPlate) || {};
   const byRoute = (lastStopRoutes && lastStopRoutes.byRoute) || {};
-  const blocks = INTERNAL_ROUTES.map((route) => {
-    const buses = allBuses.filter((b) => b._route === route);
-    if (!buses.length) return '';
+  const groups = INTERNAL_ROUTES.map((route) => {
+    const buses = allBuses.filter((b) => b._route === route)
+      .sort((a, c2) => String(a.vehplate || '').localeCompare(String(c2.vehplate || '')));
+    if (!buses.length) return null;
     const { sequence } = buildRouteSequence(route, byRoute[route] || []);
-    const rows = buses.map((b) => mBusStripHtml(b, route, sequence, byPlate)).join('');
-    const bg = ROUTE_COLORS[route] || '#4b5563';
-    const fg = route === 'A2' ? '#1a2433' : '#fff';
-    return `<div class="m-routeblk">
-      <div class="m-rb-head" style="background:${bg};color:${fg}">
-        <span class="m-rb">${escapeHtml(route)}</span>
-        <div class="m-rb-meta"><div class="m-rb-t">${escapeHtml(route)}</div><div class="m-rb-d">${escapeHtml(ROUTE_DESCRIPTION[route] || '')}</div></div>
-        <span class="m-rb-n">${buses.length} bus${buses.length === 1 ? '' : 'es'}</span>
-      </div>${rows}</div>`;
-  }).filter(Boolean).join('');
-  c.innerHTML = blocks || '<div class="empty" style="padding:1.5rem;">No buses currently in service.</div>';
+    return { route, buses, sequence };
+  }).filter(Boolean);
+  if (!groups.length) {
+    c.dataset.busSig = '';
+    c.innerHTML = '<div class="empty" style="padding:1.5rem;">No buses currently in service.</div>';
+    return;
+  }
+  // Rebuild the DOM only when the route/bus line-up changes; otherwise update
+  // rows in place so the strips keep gliding (no disappear/appear on refresh).
+  const sig = groups.map((g) => g.route + ':' + g.buses.map((b) => b.vehplate).join(',')).join('|');
+  if (c.dataset.busSig !== sig) {
+    c.dataset.busSig = sig;
+    c.innerHTML = groups.map(mRouteBlockHtml).join('');
+  }
+  for (const g of groups) {
+    const blk = c.querySelector('.m-routeblk[data-route="' + g.route + '"]');
+    if (!blk) continue;
+    for (const b of g.buses) {
+      const row = blk.querySelector('.m-busrow2[data-plate="' + CSS.escape(String(b.vehplate || '?')) + '"]');
+      if (row) updateBusStrip(row, b, g.route, g.sequence, byPlate);
+    }
+  }
+  if (!c._rbToggleBound) {
+    c._rbToggleBound = true;
+    c.addEventListener('click', (e) => {
+      const head = e.target.closest('.m-rb-head[data-toggle-route]');
+      if (!head) return;
+      const r = head.dataset.toggleRoute;
+      const open = !mExpandedRoutes.has(r);
+      mExpandedRoutes[open ? 'add' : 'delete'](r);
+      head.closest('.m-routeblk').classList.toggle('open', open);
+      head.setAttribute('aria-expanded', String(open));
+    });
+  }
   startBusAnim();
 }
 
