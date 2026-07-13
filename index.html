@@ -2512,7 +2512,7 @@ function depSkelCardHtml() {
   const bar = (w, h, mb) => `<span class="skel" style="display:block;width:${w};height:${h}px;${mb ? 'margin-bottom:' + mb + 'px;' : ''}"></span>`;
   const col = `<div class="dep-time-col">${bar('55%', 11, 9)}${bar('78%', 30)}</div>`;
   return `<div class="dep-card dep-skel-card">
-    <span class="skel" style="align-self:stretch;aspect-ratio:1/1;width:auto;flex:0 0 auto;border-radius:0"></span>
+    <span class="skel dep-sq" style="align-self:stretch;aspect-ratio:1/1;width:auto;flex:0 0 auto;border-radius:0"></span>
     <div class="dep-body"><div class="dep-times">${col}${col}</div></div>
   </div>`;
 }
@@ -2536,6 +2536,26 @@ function renderDepQr() {
   const sib = card && card.parentElement.querySelector('.dep-card:not(.dep-qr-card)');
   if (card && sib) card.style.height = sib.offsetHeight + 'px';
 }
+
+// Pin each card's left square (route badge / QR box / skeleton) to the card's
+// inner height. CSS aspect-ratio:1/1 on the stretched flex item should do this
+// alone, but not every engine transfers the stretched height to the width
+// (badges render letter-narrow on Windows), so measure and pin in px.
+function squareDepCards() {
+  const board = document.getElementById('depBoard');
+  if (!board) return;
+  for (const card of board.querySelectorAll('.dep-card')) {
+    const sq = card.querySelector('.dep-route-badge, .dep-qr-code, .dep-sq');
+    if (sq) sq.style.width = card.clientHeight + 'px';
+  }
+}
+let depSquareRaf = 0;
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(depSquareRaf);
+  depSquareRaf = requestAnimationFrame(squareDepCards);
+});
+// Web-font swap changes text metrics (and therefore card heights) — re-pin.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(squareDepCards);
 
 // Build a column descriptor for one stop: its Departure/Arrival groups + total
 // card count (terminals stack both groups in the same column).
@@ -2607,7 +2627,8 @@ function renderShuttles() {
   if (minIdx !== -1) cols[minIdx].qr = true;
   board.style.setProperty('--cols', Math.max(1, cols.length));
   board.innerHTML = cols.map(depColumnHtml).join('');
-  renderDepQr();
+  renderDepQr();          // pins the QR card's height to a sibling card first…
+  squareDepCards();       // …then square every card's badge against final heights
 }
 
 /* ==== mobile renderers (phone-native; reuse the same data + helpers) ==== */
