@@ -2361,6 +2361,10 @@ function switchView(v, skipHash) {
   if (v === 'map') setTimeout(renderMap, 50);
   if (v === 'diagnostics') renderDiagnostics();
   if (v === 'updates') ensureTickers();   // lazy-load the heavy alerts feed on demand
+  // Same idea: busPositions is a 33-stop fan-out only this tab reads, so the poll
+  // omits it elsewhere. Pull it now rather than leaving the tab blank until the
+  // next tick.
+  if (v === 'buses' && !lastBusPositions) refresh();
   if (v === 'shuttle' && IS_MOBILE()) startGeo();
   renderAll();
 }
@@ -3832,18 +3836,34 @@ async function refresh() {
   if (API_BASE) await refreshBootstrap(stops);   // prod: one Apps Script call
   else          await refreshIndividual(stops);  // dev: local Node server, per-endpoint
   renderAll();
-  // Keep alerts fresh only while they matter (Updates open, or already fetched).
-  if (currentView === 'updates' || tickersLoaded) ensureTickers(true);
+  // Keep alerts fresh only while the Updates tab is actually open. `tickersLoaded`
+  // used to keep this in the condition, but it never resets — so one visit to
+  // Updates re-polled a ~106KB payload every 30s for the rest of the session.
+  if (currentView === 'updates') ensureTickers(true);
 }
 
 // Prod path: a single /api/bootstrap call returns shuttles + activeBus +
-// busPositions + stopRoutes + announcements in one round-trip (TickerTapes is lazy).
+// stopRoutes + announcements in one round-trip (TickerTapes and busPositions are lazy).
 async function refreshBootstrap(stops) {
   try {
-    const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(','))));
+    // busPositions is a 33-stop upstream fan-out and only the Buses tab reads it,
+    // so ask for it only while that tab is open.
+    const wantPositions = (currentView === 'buses') ? '&positions=1' : '';
+    const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(',')) + wantPositions));
     const now = Date.now();
     if (b.shuttles) for (const s of stops) {
-      if (b.shuttles[s]) { lastShuttles[s] = b.shuttles[s]; shuttleFetchedAt[s] = now; }
+      if (b.shuttles[s]) {
+        lastShuttles[s] = b.shuttles[s];
+        // The server may serve a cached body, so start the countdown already aged
+        // by however long it sat there — otherwise a 25s-old ETA reads 25s late.
+        // servedAt/capturedAt are both server-side; using only their difference
+        // keeps a skewed device clock out of the maths. Older backends send
+        // neither, and this falls back to the previous receive-time behaviour.
+        const cap = b.capturedAt && b.capturedAt[s];
+        const age = (typeof b.servedAt === 'number' && typeof cap === 'number')
+          ? Math.max(0, b.servedAt - cap) : 0;
+        shuttleFetchedAt[s] = now - age;
+      }
     }
     if (b.activeBus)     lastActiveBus     = b.activeBus;
     if (b.busPositions)  lastBusPositions  = b.busPositions;
