@@ -2023,7 +2023,14 @@
   </div>
 </main>
 
-<script>window.API_BASE="https://script.google.com/macros/s/AKfycbzgX7nmtvKkHBgij0MvROpoSWzRQjnulFY6yChkWA23uXH2vC4y9zTDrgECP5qrk8Vt/exec";</script>
+<script>window.API_BASE="https://nusisb.sankhacooray.com/api";</script>
+<!-- Backend: the Cloudflare Worker (nusisb-cloudflare-worker), an edge-hosted port
+     of the Apps Script proxy — tens of ms vs the Apps Script cold-start tax. CORS
+     is open on /api, so this cross-origin call from GitHub Pages just works. To
+     roll back to Apps Script, restore the /macros/s/AKfycbzgX7.../exec URL above
+     (that backend still bundles stopRoutes/busPositions into bootstrap; this
+     frontend reads them if present and falls back to the separate endpoints). -->
+<!-- was: https://script.google.com/macros/s/AKfycbzgX7nmtvKkHBgij0MvROpoSWzRQjnulFY6yChkWA23uXH2vC4y9zTDrgECP5qrk8Vt/exec -->
 <script>
 /* ==== utilities ==== */
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -3842,14 +3849,15 @@ async function refresh() {
   if (currentView === 'updates') ensureTickers(true);
 }
 
-// Prod path: a single /api/bootstrap call returns shuttles + activeBus +
-// stopRoutes + announcements in one round-trip (TickerTapes and busPositions are lazy).
+// Prod path: one /api/bootstrap call returns shuttles + activeBus + announcements
+// (+ stopRoutes/busPositions on the Apps Script backend). The Cloudflare Worker
+// keeps bootstrap under its 50-subrequest cap by omitting the two 33-stop indices
+// and serving them as their own endpoints, so we read them from bootstrap when
+// present and otherwise fetch them separately below. Backend-agnostic: switching
+// backends is just the API_BASE change up top.
 async function refreshBootstrap(stops) {
   try {
-    // busPositions is a 33-stop upstream fan-out and only the Buses tab reads it,
-    // so ask for it only while that tab is open.
-    const wantPositions = (currentView === 'buses') ? '&positions=1' : '';
-    const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(',')) + wantPositions));
+    const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(','))));
     const now = Date.now();
     if (b.shuttles) for (const s of stops) {
       if (b.shuttles[s]) {
@@ -3866,15 +3874,27 @@ async function refreshBootstrap(stops) {
       }
     }
     if (b.activeBus)     lastActiveBus     = b.activeBus;
-    if (b.busPositions)  lastBusPositions  = b.busPositions;
-    if (b.stopRoutes)    lastStopRoutes    = b.stopRoutes;
     if (b.announcements) lastAnnouncements = b.announcements;
+    if (b.busPositions)  lastBusPositions  = b.busPositions;   // Apps Script bundles these;
+    if (b.stopRoutes)    lastStopRoutes    = b.stopRoutes;     // the Worker serves them separately (below)
     const t = b.activeBus && b.activeBus.ActiveBusResult && b.activeBus.ActiveBusResult.TimeStamp;
     if (t) latestTs = t;
   } catch (e) {
     console.warn('bootstrap', e.message);
     probeConnection();   // total failure may mean no internet despite onLine=true
   }
+  // If the backend didn't bundle the two heavy indices, fetch them from their own
+  // endpoints. stopRoutes is near-static → once; busPositions → each tick while
+  // the Buses tab (its only reader) is open.
+  if (!lastStopRoutes) loadStopRoutes();
+  if (currentView === 'buses') loadBusPositions();
+}
+
+async function loadBusPositions() {
+  try {
+    const d = await loadJSON(apiUrl('/api/BusPositions'));
+    if (d && !d.error) { lastBusPositions = d; renderAll(); }
+  } catch (e) { console.warn('BusPositions', e.message); }
 }
 
 // Dev path: the local Node server has no bootstrap endpoint, so call each
