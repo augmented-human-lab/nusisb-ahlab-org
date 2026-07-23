@@ -2257,6 +2257,10 @@ const ROUTE_INTERVAL = {
 const ETA_DEFAULT_GAP_S = 10 * 60;          // for unknown / public-bus routes
 const ETA_CRITICAL_BELOW_S = 60;             // < 1 min → "DUE/NOW" red pulse
 const ETA_SOON_RATIO = 0.30;                 // < 30% of gap → orange "soon"
+// After service hours the upstream returns tomorrow's first departure — hundreds
+// of minutes out, which just reads as noise. Drop any ETA beyond this cap so the
+// service falls back to its normal "No upcoming arrivals" empty state instead.
+const MAX_ETA_S = 99 * 60;                   // hide ETAs > 99 min → show "no buses"
 function etaCriticality(etaS, route) {
   if (route === '__arrival__') return 'arrival'; // neutral grey, no pulse
   if (etaS < ETA_CRITICAL_BELOW_S) return 'critical';
@@ -2408,7 +2412,7 @@ function mergeShuttleEntries(entries) {
     _etas: [],
   };
   for (const s of entries) merged._etas.push(...shuttleToEtas(s));
-  merged._etas = merged._etas.filter((x) => typeof x.eta_s === 'number');
+  merged._etas = merged._etas.filter((x) => typeof x.eta_s === 'number' && x.eta_s <= MAX_ETA_S);
   merged._etas.sort((a, b) => a.eta_s - b.eta_s);
   return merged;
 }
@@ -2744,6 +2748,7 @@ let geoState = 'idle';      // idle | on | denied | unsupported
 let geoWatchId = null;
 const NEAR_COUNT = 2;       // how many nearest-stop cards to show
 const HERE_M = 5;           // below this distance → "you're here"
+const MAX_NEAR_M = 999;     // beyond this, the user isn't near campus → no nearby cards
 const TO_RAD = Math.PI / 180, TO_DEG = 180 / Math.PI;
 const norm360 = (d) => ((d % 360) + 360) % 360;
 function haversine(aLat, aLng, bLat, bLng) {
@@ -2766,7 +2771,9 @@ function computeNearestList(lat, lng, n) {
     all.push({ stop, dist: haversine(lat, lng, c.lat, c.lng), bearing: bearingTo(lat, lng, c.lat, c.lng) });
   }
   all.sort((a, b) => a.dist - b.dist);
-  return all.slice(0, n);
+  // Only stops the user is genuinely near — off-campus visitors (km away) get no
+  // nearby cards rather than a "nearest stop 7 km away" card.
+  return all.filter((x) => x.dist <= MAX_NEAR_M).slice(0, n);
 }
 function startGeo() {
   if (geoState === 'on' || geoWatchId != null) return;
@@ -2775,7 +2782,11 @@ function startGeo() {
     (pos) => {
       geoState = 'on';
       const list = computeNearestList(pos.coords.latitude, pos.coords.longitude, NEAR_COUNT);
-      if (!list.length) return;
+      // Empty list means either the stop coords haven't loaded yet (wait — don't
+      // clear) or the user is beyond MAX_NEAR_M from every stop (genuinely far →
+      // clear any nearby cards). Distinguish by whether coords are loaded.
+      const coordsReady = lastStopCoords && Object.keys(lastStopCoords).length > 0;
+      if (!list.length && !coordsReady) return;
       geoNearestList = list;
       // Re-render only when the card set OR a here/away state changes; otherwise
       // just update distances + arrows in place (keeps animations smooth).
