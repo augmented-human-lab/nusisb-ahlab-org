@@ -1177,6 +1177,11 @@
   .dep-stop .dep-card .dep-eta-unit  { font-size: calc(0.95rem * var(--fit)); }
   .dep-stop .dep-card .dep-time-label{ font-size: calc(0.68rem * var(--fit)); }
   .dep-stop .dep-card .dep-times     { gap: calc(1rem * var(--fit)); }
+  /* Dense columns (e.g. Kent Ridge Terminal, > 6 services): the compact cards
+     drop the "Next"/"Following" labels, and the freed vertical space lets the
+     card body pull in a little tighter so more services fit without overflow. */
+  .dep-stop.dense .dep-card .dep-time-label { display: none; }
+  .dep-stop.dense .dep-card .dep-body { padding-top: calc(0.5rem * var(--fit)); padding-bottom: calc(0.5rem * var(--fit)); }
   .dep-stop-head {
     display: flex;
     align-items: flex-end;
@@ -2640,7 +2645,11 @@ function depColumnHtml(col) {
       : cardsHtml;
   }
   if (col.qr) body += depQrCardHtml();
-  return `<div class="dep-stop" style="--fit: ${fit.toFixed(3)};">${head}${body}</div>`;
+  // A column packed past the fit threshold (e.g. Kent Ridge Terminal) renders
+  // "dense": the Next/Following labels are dropped and card padding tightens so
+  // the extra services fit without overflow. See the `.dep-stop.dense` rules.
+  const dense = fit < 1 ? ' dense' : '';
+  return `<div class="dep-stop${dense}" style="--fit: ${fit.toFixed(3)};">${head}${body}</div>`;
 }
 
 function renderShuttles() {
