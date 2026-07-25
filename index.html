@@ -2577,6 +2577,42 @@ function renderDepQr() {
   if (card && sib) card.style.height = sib.offsetHeight + 'px';
 }
 
+// Give every "dense" column (its cards were compacted to fit > 6 services) the
+// same overall card-stack height as the tallest column, so a 12-card terminal
+// reads exactly as tall as a 6-card column — even bottoms across the board.
+// Cards divide that height equally; the fit-scaled fonts already fit the shorter
+// boxes, and .dep-body centres them vertically. Idempotent: clears its own pins
+// first, so it re-runs cleanly on resize.
+function balanceDepColumns() {
+  const board = document.getElementById('depBoard');
+  if (!board) return;
+  const cols = [...board.querySelectorAll('.dep-stop')];
+  if (cols.length < 2) return;
+  // Reset prior pins (but not the QR card, whose height renderDepQr owns).
+  for (const c of board.querySelectorAll('.dep-card:not(.dep-qr-card)')) c.style.height = '';
+  // Natural card-stack height per column — top of first card to bottom of last,
+  // which covers both the plain and the terminal (two-group) layouts.
+  const measure = (col) => {
+    const cards = [...col.querySelectorAll('.dep-card')];
+    if (!cards.length) return { cards, h: 0, sum: 0 };
+    let top = Infinity, bot = -Infinity, sum = 0;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      top = Math.min(top, r.top); bot = Math.max(bot, r.bottom); sum += r.height;
+    }
+    return { cards, h: bot - top, sum };
+  };
+  const info = cols.map(measure);
+  const href = Math.max(...info.map((x) => x.h));
+  cols.forEach((col, i) => {
+    const { cards, h, sum } = info[i];
+    if (!col.classList.contains('dense') || cards.length < 2) return;
+    const gaps = h - sum;                          // inter-card + group spacing, independent of card height
+    const target = (href - gaps) / cards.length;
+    if (target > 0) for (const c of cards) c.style.height = target + 'px';
+  });
+}
+
 // Pin each card's left square (route badge / QR box / skeleton) to the card's
 // inner height. CSS aspect-ratio:1/1 on the stretched flex item should do this
 // alone, but not every engine transfers the stretched height to the width
@@ -2592,7 +2628,7 @@ function squareDepCards() {
 let depSquareRaf = 0;
 window.addEventListener('resize', () => {
   cancelAnimationFrame(depSquareRaf);
-  depSquareRaf = requestAnimationFrame(squareDepCards);
+  depSquareRaf = requestAnimationFrame(() => { balanceDepColumns(); squareDepCards(); });
 });
 // Web-font swap changes text metrics (and therefore card heights) — re-pin.
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(squareDepCards);
@@ -2672,6 +2708,7 @@ function renderShuttles() {
   board.style.setProperty('--cols', Math.max(1, cols.length));
   board.innerHTML = cols.map(depColumnHtml).join('');
   renderDepQr();          // pins the QR card's height to a sibling card first…
+  balanceDepColumns();    // …stretch dense columns to the tallest column's height…
   squareDepCards();       // …then square every card's badge against final heights
 }
 
