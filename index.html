@@ -387,42 +387,55 @@
   #authGate.has-error .gate-err { display: block; }
   #authGate .gate-foot { margin-top: 1.4rem; font-size: 0.78rem; color: var(--text-muted); }
 
-  /* Offline gate — full-screen, above everything (picker is 95000) */
-  #offlineGate {
+  /* Offline gate — full-screen, above everything (picker is 95000). The service gate
+     (upstream token rotated / backend not responding) shares its look, one layer below. */
+  #offlineGate, #serviceGate {
     position: fixed; inset: 0; z-index: 97000; display: none;
     align-items: center; justify-content: center; padding: 1.5rem;
     background: linear-gradient(135deg, #2b3442 0%, #1a2433 100%);
     padding-top: max(1.5rem, env(safe-area-inset-top));
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
-  #offlineGate.show { display: flex; }
-  #offlineGate .off-card { text-align: center; color: #fff; max-width: 22rem; }
-  #offlineGate .off-brand { margin-bottom: 2.2rem; }
-  #offlineGate .off-app-icon {
+  #offlineGate.show, #serviceGate.show { display: flex; }
+  #offlineGate .off-card, #serviceGate .off-card { text-align: center; color: #fff; max-width: 22rem; }
+  #offlineGate .off-brand, #serviceGate .off-brand { margin-bottom: 2.2rem; }
+  #offlineGate .off-app-icon, #serviceGate .off-app-icon {
     width: 76px; height: 76px; border-radius: 18px; display: block; margin: 0 auto 0.9rem;
     box-shadow: 0 10px 26px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.10);
   }
-  #offlineGate .off-app-name { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
-  #offlineGate .off-app-sub { margin-top: 0.25rem; font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.55); }
-  #offlineGate .off-icon {
+  #offlineGate .off-app-name, #serviceGate .off-app-name { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+  #offlineGate .off-app-sub, #serviceGate .off-app-sub { margin-top: 0.25rem; font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.55); }
+  #offlineGate .off-icon, #serviceGate .off-icon {
     position: relative; width: 3.4rem; height: 3.4rem; margin: 0 auto 1rem; border-radius: 16px;
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
     color: #8a93a1; font-size: 1.4rem;
     display: flex; align-items: center; justify-content: center;
   }
-  #offlineGate .off-slash {                     /* diagonal strike over the wifi icon */
+  #offlineGate .off-slash, #serviceGate .off-slash {                     /* diagonal strike over the wifi icon */
     position: absolute; width: 2.2rem; height: 3px; border-radius: 3px;
     background: var(--high); transform: rotate(-45deg);
     box-shadow: 0 0 0 3px #232c3a;
   }
-  #offlineGate .off-foot { margin-top: 2.2rem; font-size: 0.74rem; font-weight: 600; color: rgba(255,255,255,0.35); }
-  #offlineGate h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.5rem; }
-  #offlineGate p { font-size: 0.95rem; color: rgba(255,255,255,0.72); line-height: 1.55; }
-  #offlineGate .off-checking {
+  #offlineGate .off-foot, #serviceGate .off-foot { margin-top: 2.2rem; font-size: 0.74rem; font-weight: 600; color: rgba(255,255,255,0.35); }
+  #offlineGate h2, #serviceGate h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.5rem; }
+  #offlineGate p, #serviceGate p { font-size: 0.95rem; color: rgba(255,255,255,0.72); line-height: 1.55; }
+  #offlineGate .off-checking, #serviceGate .off-checking {
     margin-top: 1.5rem; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.55);
     display: inline-flex; align-items: center; gap: 0.5rem;
   }
-  #offlineGate .off-checking i { animation: map-spin 1.6s linear infinite; }
+  #offlineGate .off-checking i, #serviceGate .off-checking i { animation: map-spin 1.6s linear infinite; }
+  #serviceGate { z-index: 96500; }            /* offline gate wins when both apply */
+  #serviceGate .off-icon { color: #f0a24a; font-size: 1.5rem; }
+  #serviceGate .off-retry {
+    margin-top: 1.5rem; padding: 0.6rem 1.3rem; border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 0.85rem; font-weight: 700; color: #fff;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #serviceGate .off-retry:hover { background: rgba(255,255,255,0.16); }
+  #serviceGate .off-retry[disabled] { opacity: 0.6; cursor: default; }
+  #serviceGate .off-retry[disabled] i { animation: map-spin 1.6s linear infinite; }
+  #serviceGate .off-checking { display: block; margin-top: 0.9rem; }
 
   .eta-min { font-weight: 700; color: var(--accent); white-space: nowrap; }
   .eta-imminent { color: var(--high); }
@@ -1919,6 +1932,27 @@
     <div class="off-foot">Augmented Human Lab</div>
   </div>
 </div>
+
+<!-- Service gate — the internet is fine but live bus data isn't: NUS rotated the
+     upstream access token (kind "auth"), or the data service stopped answering
+     (kind "down"). Blocks the half-loaded dashboard instead of leaving skeletons
+     spinning forever. Shown/hidden by setServiceDown(); normal polling keeps
+     running underneath, so it clears itself as soon as data flows again. -->
+<div id="serviceGate" aria-hidden="true" role="alertdialog" aria-labelledby="svcTitle">
+  <div class="off-card">
+    <div class="off-brand">
+      <img class="off-app-icon" src="icon-192.png" alt="NUS ISB app icon">
+      <div class="off-app-name">NUS ISB</div>
+      <div class="off-app-sub">NUS Internal Shuttle Bus tracker</div>
+    </div>
+    <div class="off-icon"><i class="fa-solid fa-key" id="svcIcon"></i></div>
+    <h2 id="svcTitle">Live bus times unavailable</h2>
+    <p id="svcBody"></p>
+    <button type="button" class="off-retry" id="svcRetry"><i class="fa-solid fa-arrows-rotate"></i> Try again</button>
+    <div class="off-checking">Retrying automatically every 30 seconds</div>
+    <div class="off-foot">Augmented Human Lab</div>
+  </div>
+</div>
 <script>
   // Detect actual mobile devices (not just narrow desktop windows): mobile UA, or
   // a small touch screen. iPad/desktop in "request desktop" mode is left as desktop.
@@ -2077,9 +2111,21 @@ function speedStatus(speed) {
   if (speed < 30) return { label: 'Moving', cls: 'medium' };
   return { label: 'Moving', cls: 'fast' };
 }
+// API calls give up after this long, so a hung backend surfaces as a failure
+// (→ service gate) instead of an endless loading state.
+const API_TIMEOUT_MS = 15000;
 async function loadJSON(url) {
-  const r = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
-  const text = await r.text();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+  let r, text;
+  try {
+    r = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+    text = await r.text();
+  } catch (e) {
+    throw e.name === 'AbortError' ? new Error('timed out after ' + API_TIMEOUT_MS / 1000 + 's') : e;
+  } finally {
+    clearTimeout(timer);
+  }
   let body;
   try { body = JSON.parse(text); } catch { body = null; }
   if (!r.ok) {
@@ -3889,6 +3935,59 @@ async function probeConnection() {
 window.addEventListener('offline', () => setOffline(true));
 window.addEventListener('online', () => probeConnection());
 
+/* ==== service gate ====
+   Online, but the bus data isn't coming. Two kinds:
+   - 'auth': the backend says FMS rejected our token (NUS rotated it). Certain and
+     not transient → gate immediately.
+   - 'down': the backend errored/timed out while the internet probe passes. Could
+     be a blip → gate after SERVICE_FAIL_LIMIT consecutive failures (the first
+     failure triggers a quick retry so that's seconds, not a full poll cycle).
+   Any successful bootstrap clears it. */
+let serviceDown = null, serviceFails = 0, serviceRetryTimer = null;
+const SERVICE_FAIL_LIMIT = 2, SERVICE_QUICK_RETRY_MS = 4000;
+const SERVICE_COPY = {
+  auth: {
+    icon: 'fa-key', title: 'Live bus times unavailable',
+    body: 'NUS has rotated the access token this app uses to read shuttle data, so arrival times can’t be loaded right now. ' +
+          'Your connection is fine — nothing to fix on your side.<br><br>Please let the developer know so it can be reconnected.',
+  },
+  down: {
+    icon: 'fa-plug-circle-xmark', title: 'Bus data isn’t responding',
+    body: 'The NUS shuttle data service isn’t answering right now, so arrival times can’t be shown. ' +
+          'Your connection is fine.<br><br>If this lasts more than a few minutes, please let the developer know.',
+  },
+};
+function isTokenError(msg) { return /FMS rejected|token may have rotated|NEXTBUS_FMS_TOKEN/i.test(msg || ''); }
+function setServiceDown(kind) {
+  if (kind === serviceDown) return;
+  serviceDown = kind;
+  const gate = document.getElementById('serviceGate');
+  if (!gate) return;
+  if (kind) {
+    const c = SERVICE_COPY[kind];
+    document.getElementById('svcIcon').className = 'fa-solid ' + c.icon;
+    document.getElementById('svcTitle').textContent = c.title;
+    document.getElementById('svcBody').innerHTML = c.body;
+  }
+  gate.classList.toggle('show', !!kind);
+  gate.setAttribute('aria-hidden', kind ? 'false' : 'true');
+}
+// Called once per bootstrap attempt with its outcome.
+function noteServiceResult(ok, errMsg) {
+  clearTimeout(serviceRetryTimer); serviceRetryTimer = null;
+  if (ok) { serviceFails = 0; setServiceDown(null); return; }
+  if (isOffline) return;                          // offline gate owns this case
+  if (isTokenError(errMsg)) { setServiceDown('auth'); return; }
+  serviceFails++;
+  if (serviceFails >= SERVICE_FAIL_LIMIT) setServiceDown('down');
+  else serviceRetryTimer = setTimeout(refresh, SERVICE_QUICK_RETRY_MS);
+}
+document.getElementById('svcRetry')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  try { await refresh(); } finally { btn.disabled = false; }
+});
+
 async function refresh() {
   if (isOffline) return;           // gate is up; probe loop will restart us
   lastRefreshAt = Date.now();
@@ -3915,6 +4014,8 @@ async function refresh() {
 async function refreshBootstrap(stops) {
   try {
     const b = await loadJSON(apiUrl('/api/bootstrap?stops=' + encodeURIComponent(stops.join(','))));
+    // Both backends report a failed action as HTTP 200 + { error } — not a success.
+    if (!b || b.error) throw new Error((b && b.error) || 'empty response');
     const now = Date.now();
     if (b.shuttles) for (const s of stops) {
       if (b.shuttles[s]) {
@@ -3936,9 +4037,17 @@ async function refreshBootstrap(stops) {
     if (b.stopRoutes)    lastStopRoutes    = b.stopRoutes;     // the Worker serves them separately (below)
     const t = b.activeBus && b.activeBus.ActiveBusResult && b.activeBus.ActiveBusResult.TimeStamp;
     if (t) latestTs = t;
+    // A backend may answer 200 yet carry the failure per stop (Apps Script shape).
+    // Every requested stop failing on the token = the token is dead.
+    const stopErrs = stops.map((s) => b.shuttles && b.shuttles[s] && b.shuttles[s].error);
+    if (stops.length && stopErrs.every(isTokenError)) noteServiceResult(false, stopErrs[0]);
+    else noteServiceResult(true);
   } catch (e) {
     console.warn('bootstrap', e.message);
-    probeConnection();   // total failure may mean no internet despite onLine=true
+    // Total failure may mean no internet despite onLine=true — find out first, so
+    // the offline gate (not the service gate) handles that case.
+    if (!isTokenError(e.message)) await probeConnection();
+    noteServiceResult(false, e.message);
   }
   // If the backend didn't bundle the two heavy indices, fetch them from their own
   // endpoints. stopRoutes is near-static → once; busPositions → each tick while
